@@ -9,6 +9,7 @@ import (
 
 func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	if i.verbose {
+		fmt.Println(Teal("#######################################################"))
 		fmt.Println(Teal("uponABAConf"))
 	}
 	// get data
@@ -24,11 +25,22 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	if ABAConfData.Round > i.State.ACState.GetCurrentABAState().Round {
 		i.State.ACState.GetCurrentABAState().InitializeRound(ABAConfData.Round)
 	}
+
+	if i.verbose {
+		fmt.Println(Teal("\tACRound:", ABAConfData.ACRound, "Round:", ABAConfData.Round, "Votes:", ABAConfData.Votes))
+		fmt.Println(Teal("\town ACState.ACRound:", i.State.ACState.ACRound))
+		fmt.Println(Teal("\tABAState of msg ACRound:", i.State.ACState.ABAState[ABAConfData.ACRound]))
+	}
+
 	// old message -> ignore
 	if ABAConfData.ACRound < i.State.ACState.ACRound {
+		if i.verbose {
+			fmt.Println(Teal("\tolg message. Returning..."))
+		}
 		return nil
 	}
-	if ABAConfData.Round < i.State.ACState.GetCurrentABAState().Round {
+	if ABAConfData.ACRound == i.State.ACState.ACRound && ABAConfData.Round < i.State.ACState.GetCurrentABAState().Round {
+		fmt.Println(Teal("\tolg message. Returning..."))
 		return nil
 	}
 
@@ -40,15 +52,29 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	// sender
 	senderID := signedABAConf.GetSigners()[0]
 
+	// for {
+	// 	if i.State.ACState.ABAState[ABAConfData.ACRound].hasAux(ABAConfData.Round, senderID, byte(0)) {
+	// 		break
+	// 	}
+	// 	if i.State.ACState.ABAState[ABAConfData.ACRound].hasAux(ABAConfData.Round, senderID, byte(1)) {
+	// 		break
+	// 	}
+	// }
+
 	alreadyReceived := abaState.hasConf(ABAConfData.Round, senderID)
 	if i.verbose {
-		fmt.Println(Teal("\tsenderID:", senderID, ", votes:", ABAConfData.Votes, ", round:", ABAConfData.Round, ", already received before:", alreadyReceived))
+		fmt.Println(Teal("\tsenderID:", senderID, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, update
 	if !alreadyReceived {
 
 		// determine if votes list is contained in local round values list
 		isContained := abaState.isContainedInValues(ABAConfData.Round, ABAConfData.Votes)
+
+		if i.verbose {
+			fmt.Println(Teal("\tis value contained in own values? ", isContained))
+		}
+
 		// list is contained -> update CONF counter
 		if isContained {
 			abaState.setConf(ABAConfData.Round, senderID)
@@ -61,7 +87,7 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	// reached strong support -> try to decide value
 	if abaState.countConf(ABAConfData.Round) >= i.State.Share.Quorum {
 		if i.verbose {
-			fmt.Println(Teal("\treached quorum"))
+			fmt.Println(Teal("\treached quorum of conf"))
 		}
 
 		// get common coin
@@ -109,24 +135,35 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 
 		// increment round
 		if i.verbose {
-			fmt.Println(Teal("\twill icrement round. Round now:", abaState.Round))
+			fmt.Println(Teal("\twill increment round. Current round:", abaState.Round))
 		}
 		abaState.IncrementRound()
 		if i.verbose {
-			fmt.Println(Teal("\tnew round:", abaState.Round))
+			fmt.Println(Teal("\tNew round:", abaState.Round))
 		}
 
 		// start new round sending INIT message with vote
 		initMsg, err := CreateABAInit(i.State, i.config, abaState.getVInput(abaState.Round), abaState.Round, ABAConfData.ACRound)
 		if err != nil {
+			fmt.Println(Teal(err, "uponABAConf: failed to create ABA Init message"))
 			return errors.Wrap(err, "uponABAConf: failed to create ABA Init message")
 		}
 		if i.verbose {
-			fmt.Println(Teal("\tSending ABAInit with new Vin:", abaState.Vin[abaState.Round], ", for round:", abaState.Round))
+			fmt.Println(Teal("\tSending ABAInit with new Vin:", abaState.Vin[abaState.Round], ", for round:", abaState.Round, ", for ACRound:", ABAConfData.ACRound))
 		}
 		i.Broadcast(initMsg)
+
 		abaState.setSentInit(abaState.Round, abaState.getVInput(abaState.Round), true)
 		abaState.setInit(abaState.Round, i.State.Share.OperatorID, abaState.getVInput(abaState.Round))
+
+		if i.verbose {
+			fmt.Println(Teal("\tupdating own initCounter and setInit:", abaState.InitCounter, ", ", abaState.SentInit))
+		}
+
+		if i.verbose {
+			fmt.Println(Teal("finishABAConf"))
+			fmt.Println(Teal("#######################################################"))
+		}
 	}
 
 	return nil

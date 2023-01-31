@@ -10,7 +10,8 @@ import (
 
 func (i *Instance) uponVCBCFinal(signedMessage *SignedMessage) error {
 	if i.verbose {
-		fmt.Println("uponVCBCFinal")
+		fmt.Println(Teal("#######################################################"))
+		fmt.Println(Teal("uponVCBCFinal"))
 	}
 	// get Data
 	vcbcFinalData, err := signedMessage.Message.GetVCBCFinalData()
@@ -21,7 +22,7 @@ func (i *Instance) uponVCBCFinal(signedMessage *SignedMessage) error {
 	// check if it has the message locally. If not, returns (since it can't validate the hash)
 	if !i.State.VCBCState.hasM(vcbcFinalData.Author, vcbcFinalData.Priority) {
 		if i.verbose {
-			fmt.Println("\tDidn't have the message locally")
+			fmt.Println(Teal("\tDidn't have the message locally"))
 		}
 		return nil
 	}
@@ -34,13 +35,13 @@ func (i *Instance) uponVCBCFinal(signedMessage *SignedMessage) error {
 		return errors.Wrap(err, "uponVCBCFinal: could not get hash of local proposals")
 	}
 	if i.verbose {
-		fmt.Println("\tgot hash")
+		fmt.Println(Teal("\tgot hash"))
 	}
 
 	// compare hash with reiceved one
 	if !bytes.Equal(vcbcFinalData.Hash, localHash) {
 		if i.verbose {
-			fmt.Println("\tdifferent hash, quiting.")
+			fmt.Println(Teal("\tdifferent hash, quiting."))
 		}
 		return nil
 	}
@@ -48,7 +49,7 @@ func (i *Instance) uponVCBCFinal(signedMessage *SignedMessage) error {
 	// check if already has local aggregated signature. If so, returns (since it alreasy has and delivered the proposals).
 	if i.State.VCBCState.hasU(vcbcFinalData.Author, vcbcFinalData.Priority) {
 		if i.verbose {
-			fmt.Println("\talready has proof, quiting.")
+			fmt.Println(Teal("\talready has proof, quiting."))
 		}
 		return nil
 	}
@@ -60,11 +61,16 @@ func (i *Instance) uponVCBCFinal(signedMessage *SignedMessage) error {
 	proposals = i.State.VCBCState.getM(vcbcFinalData.Author, vcbcFinalData.Priority)
 
 	if i.verbose {
-		fmt.Println("\tAdding to VCBC output.")
+		fmt.Println(Teal("\tAdding to VCBC output."))
 	}
 	i.AddVCBCOutput(proposals, vcbcFinalData.Priority, vcbcFinalData.Author)
 	if i.verbose {
-		fmt.Println("\tnew queue for", vcbcFinalData.Author, " and priority", vcbcFinalData.Priority, ":", i.State.VCBCState.queues[vcbcFinalData.Author])
+		fmt.Println(Teal("\tnew queue for", vcbcFinalData.Author, " and priority", vcbcFinalData.Priority, ":", i.State.VCBCState.queues[vcbcFinalData.Author]))
+	}
+
+	if i.verbose {
+		fmt.Println(Teal("finishVCBCFinal"))
+		fmt.Println(Teal("#######################################################"))
 	}
 
 	return nil

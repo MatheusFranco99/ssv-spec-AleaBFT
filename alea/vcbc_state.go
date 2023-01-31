@@ -1,6 +1,8 @@
 package alea
 
 import (
+	"sync"
+
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
 )
 
@@ -18,6 +20,7 @@ type VCBCState struct {
 
 	// store already received ready messages
 	ReceivedReady map[types.OperatorID]map[Priority]map[types.OperatorID]bool
+	mutex         sync.Mutex
 }
 
 func NewVCBCState() *VCBCState {
@@ -29,10 +32,13 @@ func NewVCBCState() *VCBCState {
 		VCBCm:         make(map[types.OperatorID]map[Priority][]*ProposalData),
 		VCBCu:         make(map[types.OperatorID]map[Priority][]byte),
 		ReceivedReady: make(map[types.OperatorID]map[Priority]map[types.OperatorID]bool),
+		mutex:         sync.Mutex{},
 	}
 }
 
 func (s *VCBCState) getR(operatorID types.OperatorID, priority Priority) uint64 {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCr[operatorID]; !exists {
 		s.VCBCr[operatorID] = make(map[Priority]uint64)
 	}
@@ -42,6 +48,8 @@ func (s *VCBCState) getR(operatorID types.OperatorID, priority Priority) uint64 
 	return s.VCBCr[operatorID][priority]
 }
 func (s *VCBCState) incrementR(operatorID types.OperatorID, priority Priority) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCr[operatorID]; !exists {
 		s.VCBCr[operatorID] = make(map[Priority]uint64)
 	}
@@ -52,6 +60,8 @@ func (s *VCBCState) incrementR(operatorID types.OperatorID, priority Priority) {
 }
 
 func (s *VCBCState) getW(operatorID types.OperatorID, priority Priority) []*SignedMessage {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCW[operatorID]; !exists {
 		s.VCBCW[operatorID] = make(map[Priority][]*SignedMessage)
 	}
@@ -62,6 +72,8 @@ func (s *VCBCState) getW(operatorID types.OperatorID, priority Priority) []*Sign
 }
 
 func (s *VCBCState) appendToW(operatorID types.OperatorID, priority Priority, signedMessage *SignedMessage) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCW[operatorID]; !exists {
 		s.VCBCW[operatorID] = make(map[Priority][]*SignedMessage)
 	}
@@ -72,6 +84,8 @@ func (s *VCBCState) appendToW(operatorID types.OperatorID, priority Priority, si
 }
 
 func (s *VCBCState) hasM(operatorID types.OperatorID, priority Priority) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCm[operatorID]; exists {
 		if _, exists := s.VCBCm[operatorID][priority]; exists {
 			return true
@@ -80,6 +94,8 @@ func (s *VCBCState) hasM(operatorID types.OperatorID, priority Priority) bool {
 	return false
 }
 func (s *VCBCState) getM(operatorID types.OperatorID, priority Priority) []*ProposalData {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCm[operatorID]; !exists {
 		s.VCBCm[operatorID] = make(map[Priority][]*ProposalData)
 	}
@@ -90,6 +106,8 @@ func (s *VCBCState) getM(operatorID types.OperatorID, priority Priority) []*Prop
 }
 
 func (s *VCBCState) appendToM(operatorID types.OperatorID, priority Priority, proposal *ProposalData) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCm[operatorID]; !exists {
 		s.VCBCm[operatorID] = make(map[Priority][]*ProposalData)
 	}
@@ -100,6 +118,8 @@ func (s *VCBCState) appendToM(operatorID types.OperatorID, priority Priority, pr
 }
 
 func (s *VCBCState) setM(operatorID types.OperatorID, priority Priority, proposals []*ProposalData) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCm[operatorID]; !exists {
 		s.VCBCm[operatorID] = make(map[Priority][]*ProposalData)
 	}
@@ -107,6 +127,8 @@ func (s *VCBCState) setM(operatorID types.OperatorID, priority Priority, proposa
 }
 
 func (s *VCBCState) equalM(operatorID types.OperatorID, priority Priority, proposals []*ProposalData) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if !s.hasM(operatorID, priority) {
 		return false
 	}
@@ -123,6 +145,8 @@ func (s *VCBCState) equalM(operatorID types.OperatorID, priority Priority, propo
 }
 
 func (s *VCBCState) hasU(operatorID types.OperatorID, priority Priority) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCu[operatorID]; exists {
 		if _, exists := s.VCBCu[operatorID][priority]; exists {
 			return true
@@ -131,6 +155,8 @@ func (s *VCBCState) hasU(operatorID types.OperatorID, priority Priority) bool {
 	return false
 }
 func (s *VCBCState) getU(operatorID types.OperatorID, priority Priority) []byte {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCu[operatorID]; !exists {
 		s.VCBCu[operatorID] = make(map[Priority][]byte)
 	}
@@ -140,6 +166,8 @@ func (s *VCBCState) getU(operatorID types.OperatorID, priority Priority) []byte 
 	return s.VCBCu[operatorID][priority]
 }
 func (s *VCBCState) setU(operatorID types.OperatorID, priority Priority, u []byte) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.VCBCu[operatorID]; !exists {
 		s.VCBCu[operatorID] = make(map[Priority][]byte)
 	}
@@ -147,6 +175,8 @@ func (s *VCBCState) setU(operatorID types.OperatorID, priority Priority, u []byt
 }
 
 func (s *VCBCState) hasReceivedReady(author types.OperatorID, priority Priority, operatorID types.OperatorID) bool {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.ReceivedReady[author]; !exists {
 		s.ReceivedReady[author] = make(map[Priority]map[types.OperatorID]bool)
 	}
@@ -160,6 +190,8 @@ func (s *VCBCState) hasReceivedReady(author types.OperatorID, priority Priority,
 }
 
 func (s *VCBCState) setReceivedReady(author types.OperatorID, priority Priority, operatorID types.OperatorID, received bool) {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
 	if _, exists := s.ReceivedReady[author]; !exists {
 		s.ReceivedReady[author] = make(map[Priority]map[types.OperatorID]bool)
 	}

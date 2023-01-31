@@ -10,6 +10,7 @@ import (
 func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 
 	if i.verbose {
+		fmt.Println(Purple("#######################################################"))
 		fmt.Println(Purple("uponABAInit"))
 	}
 
@@ -20,17 +21,30 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 	}
 
 	// if future round -> intialize future state
-	if abaInitData.ACRound > i.State.ACState.ACRound {
+	if abaInitData.ACRound >= i.State.ACState.ACRound {
 		i.State.ACState.InitializeRound(abaInitData.ACRound)
 	}
-	if abaInitData.Round > i.State.ACState.GetCurrentABAState().Round {
+	if abaInitData.ACRound == i.State.ACState.ACRound && abaInitData.Round >= i.State.ACState.GetCurrentABAState().Round {
 		i.State.ACState.GetCurrentABAState().InitializeRound(abaInitData.Round)
 	}
+
+	if i.verbose {
+		fmt.Println(Purple("\tACRound:", abaInitData.ACRound, "Round:", abaInitData.Round, "Vote:", abaInitData.Vote))
+		fmt.Println(Purple("\town ACState.ACRound:", i.State.ACState.ACRound))
+		fmt.Println(Purple("\tABAState of msg ACRound:", i.State.ACState.ABAState[abaInitData.ACRound]))
+	}
+
 	// old message -> ignore
 	if abaInitData.ACRound < i.State.ACState.ACRound {
+		if i.verbose {
+			fmt.Println(Purple("\told message. Returning..."))
+		}
 		return nil
 	}
-	if abaInitData.Round < i.State.ACState.GetCurrentABAState().Round {
+	if abaInitData.ACRound == i.State.ACState.ACRound && abaInitData.Round < i.State.ACState.GetCurrentABAState().Round {
+		if i.verbose {
+			fmt.Println(Purple("\told message. Returning..."))
+		}
 		return nil
 	}
 
@@ -44,7 +58,7 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 
 	alreadyReceived := abaState.hasInit(abaInitData.Round, senderID, abaInitData.Vote)
 	if i.verbose {
-		fmt.Println(Purple("\tsenderID:", senderID, ", vote:", abaInitData.Vote, ", round:", abaInitData.Round, ", already received before:", alreadyReceived))
+		fmt.Println(Purple("\tsenderID:", senderID, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, update
 	if !alreadyReceived {
@@ -52,7 +66,7 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 		abaState.setInit(abaInitData.Round, senderID, abaInitData.Vote)
 
 		if i.verbose {
-			fmt.Println(Purple("\tupdated counter. Vote:", abaInitData.Vote, ". InitCounter:", abaState.InitCounter))
+			fmt.Println(Purple("\tupdated counter. InitCounter:", abaState.InitCounter))
 		}
 	}
 
@@ -61,7 +75,7 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 	for _, vote := range []byte{0, 1} {
 		if !abaState.sentInit(abaInitData.Round, vote) && abaState.countInit(abaInitData.Round, vote) >= i.State.Share.PartialQuorum {
 			if i.verbose {
-				fmt.Println(Purple("\tgot weak support for (and never sent):", vote))
+				fmt.Println(Purple("\tgot weak support (and never sent):", vote))
 			}
 			// send INIT
 			initMsg, err := CreateABAInit(i.State, i.config, vote, abaInitData.Round, abaInitData.ACRound)
@@ -69,7 +83,7 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 				return errors.Wrap(err, "uponABAInit: failed to create ABA Init message after weak support")
 			}
 			if i.verbose {
-				fmt.Println(Purple("\tsending INIT"))
+				fmt.Println(Purple("\tsending INIT with vote, round, ACRound:", vote, abaInitData.Round, abaInitData.ACRound))
 			}
 			i.Broadcast(initMsg)
 			// update sent flag
@@ -100,7 +114,7 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 				return errors.Wrap(err, "uponABAInit: failed to create ABA Aux message after strong init support")
 			}
 			if i.verbose {
-				fmt.Println(Purple("\tsending ABAAux"))
+				fmt.Println(Purple("\tsending ABAAux vote, round, ACRound:", vote, abaInitData.Round, abaInitData.ACRound))
 			}
 			i.Broadcast(auxMsg)
 
@@ -108,6 +122,11 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 			abaState.setSentAux(abaInitData.Round, vote, true)
 			abaState.setAux(abaInitData.Round, i.State.Share.OperatorID, vote)
 		}
+	}
+
+	if i.verbose {
+		fmt.Println(Purple("finishingABAInit"))
+		fmt.Println(Purple("#######################################################"))
 	}
 
 	return nil

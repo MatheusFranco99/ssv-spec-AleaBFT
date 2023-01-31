@@ -1,6 +1,7 @@
 package alea
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -94,7 +95,7 @@ func (i *Instance) Start(value []byte, height Height) {
 
 		go i.Listen()
 		time.Sleep(2 * time.Second)
-		go i.StartAgreementComponent()
+		// go i.StartAgreementComponent()
 
 		// fmt.Println("Starting instance")
 
@@ -111,6 +112,14 @@ func (i *Instance) Start(value []byte, height Height) {
 }
 
 func (i *Instance) Deliver(proposals []*ProposalData) int {
+
+	for _, proposal := range proposals {
+		unixTime := int64(binary.BigEndian.Uint64(proposal.Data))
+		t := time.Unix(unixTime, 0)
+		elapsed := time.Since(t)
+		fmt.Println("$$$$$$$$$$$$$$$$$$GOT NEW LATENCY:", elapsed)
+	}
+
 	// FIX ME : to be implemented
 	return 1
 }
@@ -176,6 +185,7 @@ func (i *Instance) Broadcast(msg *SignedMessage) error {
 			if err != nil {
 				fmt.Println(err)
 			} else {
+				time.Sleep(1 / 20 * time.Second)
 				_, write_err := conn.Write(byts)
 				if write_err != nil {
 					fmt.Println("failed:", write_err)

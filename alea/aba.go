@@ -57,7 +57,7 @@ func (i *Instance) StartAgreementComponent() error {
 			return errors.Wrap(err, "failed to start ABA and get result")
 		}
 		if i.verbose {
-			fmt.Println(Yellow("\tABA result:", result))
+			fmt.Println(Yellow("\tABA result:", result), "own vote:", vote)
 		}
 		if i.State.StopAgreement {
 			break
@@ -69,7 +69,7 @@ func (i *Instance) StartAgreementComponent() error {
 			// if ABA decided 1 but own vote was 0, start recover mechanism to get VCBC messages not received from leader
 			if vote == 0 {
 				if i.verbose {
-					fmt.Println(Yellow("\tresult 1 but voted 0"))
+					fmt.Println(Yellow("\tABA result 1 but voted 0"))
 				}
 				if !i.State.VCBCState.hasM(leader, priority) {
 					// create FILLGAP message
@@ -152,10 +152,32 @@ func (i *Instance) StartABA(vote byte) (byte, error) {
 	i.State.ACState.GetCurrentABAState().setInit(i.State.ACState.GetCurrentABAState().Round, i.State.Share.OperatorID, vote)
 
 	// wait until channel Terminate receives a signal
+	// t1 := time.Now()
 	for {
+		// fmt.Println(Red("Line 157. i:", i))
+		// fmt.Println(Red("\ti.State:", i.State))
+		// fmt.Println(Red("\ti.State.ACState:", i.State.ACState))
+		// fmt.Println(Red("\ti.State.ACState.GetCurrentABAState():", i.State.ACState.GetCurrentABAState()))
+		// fmt.Println(Red("\ti.State.ACState.GetCurrentABAState().Terminate:", i.State.ACState.GetCurrentABAState().Terminate))
+		// fmt.Println(Red("\ti.State.StopAgreement:", i.State.StopAgreement))
 		if i.State.ACState.GetCurrentABAState().Terminate || i.State.StopAgreement {
 			break
 		}
+		// t2 := time.Since(t1)
+		// if t2 > 3*time.Second {
+
+		// 	i.State.ACState.Reset()
+
+		// 	// broadcast INIT message with input vote
+		// 	initMsg, err := CreateABAInit(i.State, i.config, vote, i.State.ACState.GetCurrentABAState().Round, i.State.ACState.ACRound)
+		// 	if err != nil {
+		// 		return byte(2), errors.Wrap(err, "StartABA: failed to create ABA Init message")
+		// 	}
+		// 	i.Broadcast(initMsg)
+		// 	i.State.ACState.GetCurrentABAState().setSentInit(i.State.ACState.GetCurrentABAState().Round, vote, true)
+		// 	i.State.ACState.GetCurrentABAState().setInit(i.State.ACState.GetCurrentABAState().Round, i.State.Share.OperatorID, vote)
+
+		// }
 	}
 
 	// i.State.ACState.GetCurrentABAState().Terminate = false

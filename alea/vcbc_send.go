@@ -10,7 +10,8 @@ import (
 func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 
 	if i.verbose {
-		fmt.Println("uponVCBCSend")
+		fmt.Println(White("#######################################################"))
+		fmt.Println(White("uponVCBCSend"))
 	}
 
 	// get Data
@@ -29,7 +30,7 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 	// get sender of the message
 	senderID := signedMessage.GetSigners()[0]
 	if i.verbose {
-		fmt.Println("\tgot senderID:", senderID)
+		fmt.Println(White("\tgot senderID:", senderID))
 	}
 
 	// if it's the sender and the author, just add the not added ready signature
@@ -41,7 +42,7 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 	// if message hasn't been received and the Author of the VCBC is the same as the sender of the message -> sign and answer with READY
 	if senderID == vcbcSendData.Author {
 		if i.verbose {
-			fmt.Println("\tsenderID is the same as the author")
+			fmt.Println(White("\tsenderID is the same as the author"))
 		}
 
 		hash, err := GetProposalsHash(vcbcSendData.Proposals)
@@ -49,7 +50,7 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 			return errors.New("uponVCBCSend: could not get hash of proposals")
 		}
 		if i.verbose {
-			fmt.Println("\tgot hash")
+			fmt.Println(White("\tgot hash"))
 		}
 
 		// create VCBCReady message with proof
@@ -59,12 +60,17 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 		}
 
 		if i.verbose {
-			fmt.Println("\tBroadcasting VCBC ready")
+			fmt.Println(White("\tBroadcasting VCBC ready"))
 		}
 		// FIX ME : send specifically to author
 		// i.Broadcast(vcbcReadyMsg)
 		i.SendTCP(vcbcReadyMsg, senderID)
 
+	}
+
+	if i.verbose {
+		fmt.Println(White("finishVCBCSend"))
+		fmt.Println(White("#######################################################"))
 	}
 
 	return nil

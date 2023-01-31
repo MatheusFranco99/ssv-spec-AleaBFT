@@ -10,7 +10,8 @@ import (
 
 func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 	if i.verbose {
-		fmt.Println("uponVCBCReady")
+		fmt.Println(Purple("#######################################################"))
+		fmt.Println(Purple("uponVCBCReady"))
 	}
 	// get Data
 	vcbcReadyData, err := signedMessage.Message.GetVCBCReadyData()
@@ -21,7 +22,7 @@ func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 	// get sender ID
 	senderID := signedMessage.GetSigners()[0]
 	if i.verbose {
-		fmt.Println("\tgod senderID:", senderID)
+		fmt.Println(Purple("\tgod senderID:", senderID))
 	}
 
 	// check if it's the first time. If not, return. If yes, update map and continue
@@ -34,7 +35,7 @@ func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 	// If this is the author of the VCBC proposals -> aggregate signature
 	if vcbcReadyData.Author == i.State.Share.OperatorID {
 		if i.verbose {
-			fmt.Println("\tgoing to update W and r")
+			fmt.Println(Purple("\tgoing to update W and r"))
 		}
 
 		// update W, the list of signedMessages to be aggregated later
@@ -46,16 +47,16 @@ func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 		r := i.State.VCBCState.getR(vcbcReadyData.Author, vcbcReadyData.Priority)
 
 		if i.verbose {
-			fmt.Println("\tW:", W)
+			fmt.Println(Purple("\tW:", W))
 		}
 		if i.verbose {
-			fmt.Println("\tr:", r)
+			fmt.Println(Purple("\tr:", r))
 		}
 
 		// if reached quorum, aggregate signatures and broadcast FINAL message
 		if r >= i.State.Share.Quorum {
 			if i.verbose {
-				fmt.Println("\treached quorum")
+				fmt.Println(Purple("\treached quorum"))
 			}
 
 			aggregatedMessage, err := AggregateMsgs(W)
@@ -63,7 +64,7 @@ func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 				return errors.Wrap(err, "uponVCBCReady: unable to aggregate messages to produce VCBCFinal")
 			}
 			if i.verbose {
-				fmt.Println("\tgot aggregatedMessage")
+				fmt.Println(Purple("\tgot aggregatedMessage"))
 			}
 
 			aggregatedMsgEncoded, err := aggregatedMessage.Encode()
@@ -78,11 +79,16 @@ func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 				return errors.Wrap(err, "uponVCBCReady: failed to create VCBCReady message with proof")
 			}
 			if i.verbose {
-				fmt.Println("\tBroadcasting VCBCFinal")
+				fmt.Println(Purple("\tBroadcasting VCBCFinal"))
 			}
 			i.Broadcast(vcbcFinalMsg)
 
 		}
+	}
+
+	if i.verbose {
+		fmt.Println(Purple("finishVCBCReady"))
+		fmt.Println(Purple("#######################################################"))
 	}
 
 	return nil

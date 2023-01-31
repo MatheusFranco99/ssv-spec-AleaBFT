@@ -9,6 +9,7 @@ import (
 
 func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 	if i.verbose {
+		fmt.Println(Red("#######################################################"))
 		fmt.Println(Red("uponABAFinish"))
 	}
 	// get data
@@ -21,8 +22,17 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 	if ABAFinishData.ACRound > i.State.ACState.ACRound {
 		i.State.ACState.InitializeRound(ABAFinishData.ACRound)
 	}
+
+	if i.verbose {
+		fmt.Println(Red("\tABAFinish Vote:", ABAFinishData.Vote, ", ACRound:", ABAFinishData.ACRound))
+	}
+
 	// old message -> ignore
 	if ABAFinishData.ACRound < i.State.ACState.ACRound {
+
+		if i.verbose {
+			fmt.Println(Red("\told message. Returning..."))
+		}
 		return nil
 	}
 
@@ -36,7 +46,7 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 
 	alreadyReceived := abaState.hasFinish(senderID)
 	if i.verbose {
-		fmt.Println(Red("\tsenderID:", senderID, ", vote:", ABAFinishData.Vote, ", already received before:", alreadyReceived))
+		fmt.Println(Red("\tsenderID:", senderID, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, update
 	if !alreadyReceived {
@@ -50,45 +60,52 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 			fmt.Println(Red("\tincremented finish counter:", abaState.FinishCounter))
 		}
 		if i.verbose {
-			fmt.Println(Red("\tSentFinish:", abaState.SentFinish))
+			fmt.Println(Red("\tstate of SentFinish:", abaState.SentFinish))
 		}
 	}
 
 	// if FINISH(b) reached partial quorum and never broadcasted FINISH(b), broadcast
 	if !abaState.sentFinish(byte(0)) && !abaState.sentFinish(byte(1)) {
-		for _, vote := range []byte{0, 1} {
+		vote := ABAFinishData.Vote
+		if abaState.countFinish(vote) >= i.State.Share.PartialQuorum {
+			if i.verbose {
+				fmt.Println(Red("\treached partial quorum of finish and never sent -> sending new, for vote:", vote))
+				fmt.Println(Red("\tsentFinish[vote]:", abaState.sentFinish(vote), ", vote", vote))
 
-			if abaState.countFinish(vote) >= i.State.Share.PartialQuorum {
-				if i.verbose {
-					fmt.Println(Red("\treached partial quorum of finish and never sent -> sending new, for vote:", vote))
-					fmt.Println(Red("\tsentFinish[vote]:", abaState.sentFinish(vote), ", vote", vote))
+			}
+			// broadcast FINISH
+			finishMsg, err := CreateABAFinish(i.State, i.config, vote, ABAFinishData.ACRound)
+			if err != nil {
+				return errors.Wrap(err, "uponABAFinish: failed to create ABA Finish message")
+			}
+			if i.verbose {
+				fmt.Println(Red("\tsending ABAFinish with vote", vote))
+			}
+			i.Broadcast(finishMsg)
+			// update sent flag
 
-				}
-				// broadcast FINISH
-				finishMsg, err := CreateABAFinish(i.State, i.config, vote, ABAFinishData.ACRound)
-				if err != nil {
-					return errors.Wrap(err, "uponABAFinish: failed to create ABA Finish message")
-				}
-				if i.verbose {
-					fmt.Println(Red("\tsending ABAFinish"))
-				}
-				i.Broadcast(finishMsg)
-				// update sent flag
-				abaState.setSentFinish(vote, true)
-				abaState.setFinish(i.State.Share.OperatorID, vote)
+			abaState.setSentFinish(vote, true)
+			abaState.setFinish(i.State.Share.OperatorID, vote)
+			if i.verbose {
+				fmt.Println(Red("\tupdating finishCounter and setFinish:", abaState.FinishCounter, ", ", abaState.SentFinish))
 			}
 		}
 	}
 
 	// if FINISH(b) reached Quorum, decide for b and send termination signal
-	for _, vote := range []byte{0, 1} {
-		if abaState.countFinish(vote) >= i.State.Share.Quorum {
-			if i.verbose {
-				fmt.Println(Red("\treached quorum for vote:", vote))
-			}
-			abaState.setDecided(vote)
-			abaState.setTerminate(true)
+	vote := ABAFinishData.Vote
+	if abaState.countFinish(vote) >= i.State.Share.Quorum {
+		if i.verbose {
+			fmt.Println(Red("\treached quorum for vote:", vote))
+			fmt.Println(Red("\tsetting decided and terminate"))
 		}
+		abaState.setDecided(vote)
+		abaState.setTerminate(true)
+	}
+
+	if i.verbose {
+		fmt.Println(Red("finishABAFinish"))
+		fmt.Println(Red("#######################################################"))
 	}
 
 	return nil
