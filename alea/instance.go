@@ -3,12 +3,42 @@ package alea
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"net"
+	"os"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
 )
+
+var (
+	Info = Teal
+	Warn = Yellow
+	Fata = Red
+)
+
+var (
+	Black   = Color("\033[1;30m%s\033[0m")
+	Red     = Color("\033[1;31m%s\033[0m")
+	Green   = Color("\033[1;32m%s\033[0m")
+	Yellow  = Color("\033[1;33m%s\033[0m")
+	Purple  = Color("\033[1;34m%s\033[0m")
+	Magenta = Color("\033[1;35m%s\033[0m")
+	Teal    = Color("\033[1;36m%s\033[0m")
+	White   = Color("\033[1;37m%s\033[0m")
+)
+
+func Color(colorString string) func(...interface{}) string {
+	sprint := func(args ...interface{}) string {
+		return fmt.Sprintf(colorString,
+			fmt.Sprint(args...))
+	}
+	return sprint
+}
 
 type ProposedValueCheckF func(data []byte) error
 type ProposerF func(state *State, round Round) types.OperatorID
@@ -51,7 +81,7 @@ func NewInstance(
 		},
 		config:      config,
 		processMsgF: types.NewThreadSafeF(),
-		verbose:     false,
+		verbose:     true,
 	}
 }
 
@@ -61,6 +91,10 @@ func (i *Instance) Start(value []byte, height Height) {
 		i.StartValue = value
 		i.State.Round = FirstRound
 		i.State.Height = height
+
+		go i.Listen()
+		time.Sleep(2 * time.Second)
+		go i.StartAgreementComponent()
 
 		// fmt.Println("Starting instance")
 
@@ -73,7 +107,6 @@ func (i *Instance) Start(value []byte, height Height) {
 		// 		vcbc message: is the broadcast a node does after receiving a batch size number of proposals
 
 		// The agreement component consists of an infinite loop and we shall call it with another Thread
-		go i.StartAgreementComponent()
 	})
 }
 
@@ -82,26 +115,110 @@ func (i *Instance) Deliver(proposals []*ProposalData) int {
 	return 1
 }
 
+func (i *Instance) Listen() error {
+	port := strconv.Itoa(8000 + int(i.State.Share.OperatorID))
+	l, err := net.Listen("tcp", "localhost:"+port)
+	if err != nil {
+		fmt.Println("Error listening:", err.Error())
+		os.Exit(1)
+	}
+	defer l.Close()
+	fmt.Println("Listening on localhost:" + port)
+	for {
+		conn, err := l.Accept()
+		if err != nil {
+			fmt.Println("Error accepting: ", err.Error())
+			return err
+		}
+		go i.handleRequest(conn)
+	}
+}
+
+func (i *Instance) handleRequest(conn net.Conn) {
+	buf, read_err := ioutil.ReadAll(conn)
+	if read_err != nil {
+		fmt.Println("failed:", read_err)
+		return
+	}
+	signedMessage := &SignedMessage{}
+	signedMessage.Decode(buf)
+	_, _, _, err := i.ProcessMsg(signedMessage)
+	if err != nil {
+		fmt.Println("Error processing msg:", err)
+	}
+}
+
 func (i *Instance) Broadcast(msg *SignedMessage) error {
 	byts, err := msg.Encode()
 	if err != nil {
 		return errors.Wrap(err, "could not encode message")
 	}
 
-	msgID := types.MessageID{}
-	copy(msgID[:], msg.Message.Identifier)
+	// msgID := types.MessageID{}
+	// copy(msgID[:], msg.Message.Identifier)
 
-	msgToBroadcast := &types.SSVMessage{
-		MsgType: types.SSVConsensusMsgType,
-		MsgID:   msgID,
-		Data:    byts,
+	// msgToBroadcast := &types.SSVMessage{
+	// 	MsgType: types.SSVConsensusMsgType,
+	// 	MsgID:   msgID,
+	// 	Data:    byts,
+	// }
+
+	// if i.verbose {
+	// 	fmt.Println("\tBroadcasting:", msg.Message.MsgType, msg.Message.Data)
+	// }
+
+	// return i.config.GetNetwork().Broadcast(msgToBroadcast)
+	for _, operator := range i.State.Share.Committee {
+		operatorID := operator.OperatorID
+		if operatorID != i.State.Share.OperatorID {
+			port := strconv.Itoa(8000 + int(operatorID))
+			conn, err := net.Dial("tcp", "localhost:"+port)
+			if err != nil {
+				fmt.Println(err)
+			} else {
+				_, write_err := conn.Write(byts)
+				if write_err != nil {
+					fmt.Println("failed:", write_err)
+				}
+				conn.(*net.TCPConn).CloseWrite()
+			}
+		}
+	}
+	return nil
+}
+
+func (i *Instance) SendTCP(msg *SignedMessage, operatorID types.OperatorID) error {
+	byts, err := msg.Encode()
+	if err != nil {
+		return errors.Wrap(err, "could not encode message")
 	}
 
-	if i.verbose {
-		fmt.Println("\tBroadcasting:", msg.Message.MsgType, msg.Message.Data)
-	}
+	// msgID := types.MessageID{}
+	// copy(msgID[:], msg.Message.Identifier)
 
-	return i.config.GetNetwork().Broadcast(msgToBroadcast)
+	// msgToBroadcast := &types.SSVMessage{
+	// 	MsgType: types.SSVConsensusMsgType,
+	// 	MsgID:   msgID,
+	// 	Data:    byts,
+	// }
+
+	// if i.verbose {
+	// 	fmt.Println("\tBroadcasting:", msg.Message.MsgType, msg.Message.Data)
+	// }
+
+	// return i.config.GetNetwork().Broadcast(msgToBroadcast)
+	port := strconv.Itoa(8000 + int(operatorID))
+	conn, err := net.Dial("tcp", "localhost:"+port)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		_, write_err := conn.Write(byts)
+		if write_err != nil {
+			fmt.Println("failed:", write_err)
+		}
+		conn.(*net.TCPConn).CloseWrite()
+	}
+	return nil
 }
 
 // ProcessMsg processes a new QBFT msg, returns non nil error on msg processing error

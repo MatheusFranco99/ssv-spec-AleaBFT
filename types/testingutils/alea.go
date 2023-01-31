@@ -47,9 +47,24 @@ var TestingShareAlea = func(keysSet *TestKeySet) *types.Share {
 		FeeRecipientAddress: TestingFeeRecipient,
 	}
 }
+var TestingShareAleaN = func(keysSet *TestKeySet, op types.OperatorID) *types.Share {
+	return &types.Share{
+		OperatorID:          op,
+		ValidatorPubKey:     keysSet.ValidatorPK.Serialize(),
+		SharePubKey:         keysSet.Shares[op].GetPublicKey().Serialize(),
+		DomainType:          types.PrimusTestnet,
+		Quorum:              keysSet.Threshold,
+		PartialQuorum:       keysSet.PartialThreshold,
+		Committee:           keysSet.Committee(),
+		FeeRecipientAddress: TestingFeeRecipient,
+	}
+}
 
 var BaseInstanceAlea = func() *alea.Instance {
 	return baseInstanceAlea(TestingShareAlea(Testing4SharesSet()), Testing4SharesSet(), []byte{1, 2, 3, 4})
+}
+var BaseInstanceAleaN = func(op types.OperatorID) *alea.Instance {
+	return baseInstanceAlea(TestingShareAleaN(Testing4SharesSet(), op), Testing4SharesSet(), []byte{1, 2, 3, 4})
 }
 
 var SevenOperatorsInstanceAlea = func() *alea.Instance {

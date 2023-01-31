@@ -67,7 +67,8 @@ func (i *Instance) uponFillGap(signedFillGap *SignedMessage, fillgapMsgContainer
 		}
 
 		// FIX ME : send only to sender of fillGap msg
-		i.Broadcast(fillerMsg)
+		// i.Broadcast(fillerMsg)
+		i.SendTCP(fillerMsg, signedFillGap.GetSigners()[0])
 	}
 
 	return nil

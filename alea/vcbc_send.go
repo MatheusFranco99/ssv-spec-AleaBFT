@@ -62,7 +62,9 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 			fmt.Println("\tBroadcasting VCBC ready")
 		}
 		// FIX ME : send specifically to author
-		i.Broadcast(vcbcReadyMsg)
+		// i.Broadcast(vcbcReadyMsg)
+		i.SendTCP(vcbcReadyMsg, senderID)
+
 	}
 
 	return nil

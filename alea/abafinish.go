@@ -9,7 +9,7 @@ import (
 
 func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 	if i.verbose {
-		fmt.Println("uponABAFinish")
+		fmt.Println(Red("uponABAFinish"))
 	}
 	// get data
 	ABAFinishData, err := signedABAFinish.Message.GetABAFinishData()
@@ -36,7 +36,7 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 
 	alreadyReceived := abaState.hasFinish(senderID)
 	if i.verbose {
-		fmt.Println("\tsenderID:", senderID, ", vote:", ABAFinishData.Vote, ", already received before:", alreadyReceived)
+		fmt.Println(Red("\tsenderID:", senderID, ", vote:", ABAFinishData.Vote, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, update
 	if !alreadyReceived {
@@ -47,10 +47,10 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 		// increment counter
 		abaState.setFinish(senderID, vote)
 		if i.verbose {
-			fmt.Println("\tincremented finish counter:", abaState.FinishCounter)
+			fmt.Println(Red("\tincremented finish counter:", abaState.FinishCounter))
 		}
 		if i.verbose {
-			fmt.Println("\tSentFinish:", abaState.SentFinish)
+			fmt.Println(Red("\tSentFinish:", abaState.SentFinish))
 		}
 	}
 
@@ -60,8 +60,8 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 
 			if abaState.countFinish(vote) >= i.State.Share.PartialQuorum {
 				if i.verbose {
-					fmt.Println("\treached partial quorum of finish and never sent -> sending new, for vote:", vote)
-					fmt.Println("\tsentFinish[vote]:", abaState.sentFinish(vote), ", vote", vote)
+					fmt.Println(Red("\treached partial quorum of finish and never sent -> sending new, for vote:", vote))
+					fmt.Println(Red("\tsentFinish[vote]:", abaState.sentFinish(vote), ", vote", vote))
 
 				}
 				// broadcast FINISH
@@ -70,7 +70,7 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 					return errors.Wrap(err, "uponABAFinish: failed to create ABA Finish message")
 				}
 				if i.verbose {
-					fmt.Println("\tsending ABAFinish")
+					fmt.Println(Red("\tsending ABAFinish"))
 				}
 				i.Broadcast(finishMsg)
 				// update sent flag
@@ -84,7 +84,7 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 	for _, vote := range []byte{0, 1} {
 		if abaState.countFinish(vote) >= i.State.Share.Quorum {
 			if i.verbose {
-				fmt.Println("\treached quorum for vote:", vote)
+				fmt.Println(Red("\treached quorum for vote:", vote))
 			}
 			abaState.setDecided(vote)
 			abaState.setTerminate(true)

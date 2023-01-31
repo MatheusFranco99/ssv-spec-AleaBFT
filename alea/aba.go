@@ -10,11 +10,11 @@ import (
 func (i *Instance) StartAgreementComponent() error {
 
 	if i.verbose {
-		fmt.Println("StartingAgreementComponent")
+		fmt.Println(Yellow("StartingAgreementComponent"))
 	}
 	for {
 		if i.verbose {
-			fmt.Println("\tAC: Round:", i.State.ACState.ACRound)
+			fmt.Println(Yellow("\tAC: Round:", i.State.ACState.ACRound))
 		}
 
 		// check if it should stop performing agreement
@@ -25,7 +25,7 @@ func (i *Instance) StartAgreementComponent() error {
 		// calculate the round leader (to get value to be decided on)
 		leader := i.config.GetProposerF()(i.State, Round(i.State.ACState.ACRound))
 		if i.verbose {
-			fmt.Println("\tLeader:", leader)
+			fmt.Println(Yellow("\tLeader:", leader))
 		}
 
 		// get the local queue associated with the leader's id (create if there isn't one)
@@ -37,7 +37,7 @@ func (i *Instance) StartAgreementComponent() error {
 		// get the value of the queue with the lowest priority value
 		value, priority := queue.Peek()
 		if i.verbose {
-			fmt.Println("\tPeek:", value, priority)
+			fmt.Println(Yellow("\tPeek:", value, priority))
 		}
 
 		// decide own vote
@@ -48,7 +48,7 @@ func (i *Instance) StartAgreementComponent() error {
 			vote = byte(1)
 		}
 		if i.verbose {
-			fmt.Println("\tvote:", vote)
+			fmt.Println(Yellow("\tvote:", vote))
 		}
 
 		// start ABA protocol
@@ -57,7 +57,7 @@ func (i *Instance) StartAgreementComponent() error {
 			return errors.Wrap(err, "failed to start ABA and get result")
 		}
 		if i.verbose {
-			fmt.Println("\tABA result:", result)
+			fmt.Println(Yellow("\tABA result:", result))
 		}
 		if i.State.StopAgreement {
 			break
@@ -69,7 +69,7 @@ func (i *Instance) StartAgreementComponent() error {
 			// if ABA decided 1 but own vote was 0, start recover mechanism to get VCBC messages not received from leader
 			if vote == 0 {
 				if i.verbose {
-					fmt.Println("\tresult 1 but voted 0")
+					fmt.Println(Yellow("\tresult 1 but voted 0"))
 				}
 				if !i.State.VCBCState.hasM(leader, priority) {
 					// create FILLGAP message
@@ -79,13 +79,13 @@ func (i *Instance) StartAgreementComponent() error {
 						return errors.Wrap(err, "StartAgreementComponent: failed to create FillGap message")
 					}
 					if i.verbose {
-						fmt.Println("\tBroadcasting fill gap")
+						fmt.Println(Yellow("\tBroadcasting fill gap"))
 					}
 					i.Broadcast(fillGapMsg)
 					// wait for the value to be received
 					i.WaitFillGapResponse(leader, priority, fillerContLen)
 					if i.verbose {
-						fmt.Println("\tgot filler response")
+						fmt.Println(Yellow("\tgot filler response"))
 					}
 				}
 			}
@@ -93,17 +93,17 @@ func (i *Instance) StartAgreementComponent() error {
 			// get decided value
 			value, priority = queue.Peek()
 			if i.verbose {
-				fmt.Println("\tpeek before delivering:", value, priority)
+				fmt.Println(Yellow("\tpeek before delivering:", value, priority))
 			}
 
 			// remove the value from the queue and add it to S
 			queue.Dequeue()
 			if i.verbose {
-				fmt.Println("\tqueue dequeued. New queue:", queue)
+				fmt.Println(Yellow("\tqueue dequeued. New queue:", queue))
 			}
 			i.State.Delivered.Enqueue(value, priority)
 			if i.verbose {
-				fmt.Println("\tdelivered enqueued values:", i.State.Delivered)
+				fmt.Println(Yellow("\tdelivered enqueued values:", i.State.Delivered))
 			}
 			// return the value to the client
 			i.Deliver(value)

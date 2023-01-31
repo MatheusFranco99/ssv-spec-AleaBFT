@@ -27,7 +27,8 @@ func (i *Instance) uponVCBCRequest(signedMessage *SignedMessage) error {
 	}
 
 	// FIX ME : send only to requester
-	i.Broadcast(msgToBroadcast)
+	// i.Broadcast(msgToBroadcast)
+	i.SendTCP(msgToBroadcast, signedMessage.GetSigners()[0])
 
 	return nil
 }

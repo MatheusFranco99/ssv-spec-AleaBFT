@@ -9,7 +9,7 @@ import (
 
 func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 	if i.verbose {
-		fmt.Println("uponABAAux")
+		fmt.Println(Magenta("uponABAAux"))
 	}
 	// get message Data
 	ABAAuxData, err := signedABAAux.Message.GetABAAuxData()
@@ -42,13 +42,13 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 
 	alreadyReceived := abaState.hasAux(ABAAuxData.Round, senderID, ABAAuxData.Vote)
 	if i.verbose {
-		fmt.Println("\tsenderID:", senderID, ", vote:", ABAAuxData.Vote, ", round:", ABAAuxData.Round, ", already received before:", alreadyReceived)
+		fmt.Println(Magenta("\tsenderID:", senderID, ", vote:", ABAAuxData.Vote, ", round:", ABAAuxData.Round, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, increment counter
 	if !alreadyReceived {
 		voteInLocalValues := abaState.existsInValues(ABAAuxData.Round, ABAAuxData.Vote)
 		if i.verbose {
-			fmt.Println("\tvote received is in local values:", voteInLocalValues, ". Local values (of round", ABAAuxData.Round, "):", abaState.Values[ABAAuxData.Round], ". Vote:", ABAAuxData.Vote)
+			fmt.Println(Magenta("\tvote received is in local values:", voteInLocalValues, ". Local values (of round", ABAAuxData.Round, "):", abaState.Values[ABAAuxData.Round], ". Vote:", ABAAuxData.Vote))
 		}
 
 		if voteInLocalValues {
@@ -56,7 +56,7 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 
 			abaState.setAux(ABAAuxData.Round, senderID, ABAAuxData.Vote)
 			if i.verbose {
-				fmt.Println("\tincremented aux counter. Vote:", ABAAuxData.Vote)
+				fmt.Println(Magenta("\tincremented aux counter. Vote:", ABAAuxData.Vote))
 			}
 		}
 	}
@@ -64,10 +64,10 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 	// if received 2f+1 AUX messages, try to send CONF
 	if (abaState.countAux(ABAAuxData.Round, 0)+abaState.countAux(ABAAuxData.Round, 1)) >= i.State.Share.Quorum && !abaState.sentConf(ABAAuxData.Round) {
 		if i.verbose {
-			fmt.Println("\tgot quorum of AUX and never sent conf")
+			fmt.Println(Magenta("\tgot quorum of AUX and never sent conf"))
 		}
 		if i.verbose {
-			fmt.Println("\tsending:", abaState.Values[ABAAuxData.Round], "for round:", ABAAuxData.Round)
+			fmt.Println(Magenta("\tsending:", abaState.Values[ABAAuxData.Round], "for round:", ABAAuxData.Round))
 		}
 		// broadcast CONF message
 		confMsg, err := CreateABAConf(i.State, i.config, abaState.Values[ABAAuxData.Round], ABAAuxData.Round, ABAAuxData.ACRound)
@@ -75,7 +75,7 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 			return errors.Wrap(err, "uponABAAux: failed to create ABA Conf message after strong support")
 		}
 		if i.verbose {
-			fmt.Println("\tbroadcasting ABAConf")
+			fmt.Println(Magenta("\tbroadcasting ABAConf"))
 		}
 		i.Broadcast(confMsg)
 

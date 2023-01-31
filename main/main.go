@@ -3,6 +3,8 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"os"
+	"strconv"
 
 	// spec "github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
@@ -51,6 +53,17 @@ var TestingShare = func(keysSet *testingutils.TestKeySet, shareIndex types.Opera
 }
 
 func main() {
+	n, err := strconv.Atoi(os.Args[1])
+	if err != nil {
+		fmt.Println("Error reading input n:", err)
+		return
+	}
+	inst := testingutils.BaseInstanceAleaN(types.OperatorID(n))
+	inst.Start([]byte{1, 2, 3, 4}, alea.FirstHeight)
+
+	for {
+
+	}
 
 	// var TestingSK = func() *bls.SecretKey {
 	// 	types.InitBLS()
@@ -74,48 +87,48 @@ func main() {
 	// 	},
 	// }
 	// fmt.Println("created Share", testingShare)
-	ks := testingutils.Testing4SharesSet()
-	fmt.Println("Ks structure:validator SK, validator PK, shareCount, quorum, partialQuorum, shares (map), DKGOperators map to structure with SK, ETHAddr, EncryptionKey")
-	fmt.Println("\t\tcreated Ks", ks)
+	// ks := testingutils.Testing4SharesSet()
+	// fmt.Println("Ks structure:validator SK, validator PK, shareCount, quorum, partialQuorum, shares (map), DKGOperators map to structure with SK, ETHAddr, EncryptionKey")
+	// fmt.Println("\t\tcreated Ks", ks)
 
-	config := TestingConfig(ks)
-	fmt.Println("Config: signer, signing pk, domain, valueCheckF, ProposerF, network, timer")
-	fmt.Println("\t\tcreated Config", config)
+	// config := TestingConfig(ks)
+	// fmt.Println("Config: signer, signing pk, domain, valueCheckF, ProposerF, network, timer")
+	// fmt.Println("\t\tcreated Config", config)
 
-	controller := alea.NewController(
-		[]byte{1, 2, 3, 4},
-		TestingShare(ks, 1),
-		testingutils.TestingConfig(ks).Domain,
-		config,
-	)
-	fmt.Println("Controller: identifier, height, stored instances, future msg container, domain, share, config")
-	fmt.Println("\t\tcreated Controller", controller)
-	fmt.Println("\tShare:", controller.Share)
+	// controller := alea.NewController(
+	// 	[]byte{1, 2, 3, 4},
+	// 	TestingShare(ks, 1),
+	// 	testingutils.TestingConfig(ks).Domain,
+	// 	config,
+	// )
+	// fmt.Println("Controller: identifier, height, stored instances, future msg container, domain, share, config")
+	// fmt.Println("\t\tcreated Controller", controller)
+	// fmt.Println("\tShare:", controller.Share)
 
-	controller2 := alea.NewController(
-		[]byte{1, 2, 3, 4},
-		TestingShare(ks, 2),
-		testingutils.TestingConfig(ks).Domain,
-		config,
-	)
-	fmt.Println("Controller: identifier, height, stored instances, future msg container, domain, share, config")
-	fmt.Println("\t\tcreated Controller2", controller2)
+	// controller2 := alea.NewController(
+	// 	[]byte{1, 2, 3, 4},
+	// 	TestingShare(ks, 2),
+	// 	testingutils.TestingConfig(ks).Domain,
+	// 	config,
+	// )
+	// fmt.Println("Controller: identifier, height, stored instances, future msg container, domain, share, config")
+	// fmt.Println("\t\tcreated Controller2", controller2)
 
-	controller.StartNewInstance([]byte{1})
-	instance := controller.InstanceForHeight(0)
-	fmt.Println("\tInstance:", instance)
+	// controller.StartNewInstance([]byte{1})
+	// instance := controller.InstanceForHeight(0)
+	// fmt.Println("\tInstance:", instance)
 
-	controller2.StartNewInstance([]byte{2})
-	instance2 := controller2.InstanceForHeight(0)
-	fmt.Println("\tInstance2:", instance2)
+	// controller2.StartNewInstance([]byte{2})
+	// instance2 := controller2.InstanceForHeight(0)
+	// fmt.Println("\tInstance2:", instance2)
 
-	proposal1, err := alea.CreateProposal(instance.State, instance.GetConfig(), []byte{1, 1})
-	if err != nil {
-		errors.Wrap(err, "could not create proposal message")
-	}
-	controller.ProcessMsg(proposal1)
-	proposal2, err := alea.CreateProposal(instance.State, instance.GetConfig(), []byte{1, 2})
-	controller.ProcessMsg(proposal2)
+	// proposal1, err := alea.CreateProposal(instance.State, instance.GetConfig(), []byte{1, 1})
+	// if err != nil {
+	// 	errors.Wrap(err, "could not create proposal message")
+	// }
+	// controller.ProcessMsg(proposal1)
+	// proposal2, err := alea.CreateProposal(instance.State, instance.GetConfig(), []byte{1, 2})
+	// controller.ProcessMsg(proposal2)
 
 	// proposalData1, err := proposal1.Message.GetProposalData()
 	// if err != nil {

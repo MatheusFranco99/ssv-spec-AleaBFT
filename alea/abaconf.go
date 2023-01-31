@@ -9,7 +9,7 @@ import (
 
 func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	if i.verbose {
-		fmt.Println("uponABAConf")
+		fmt.Println(Teal("uponABAConf"))
 	}
 	// get data
 	ABAConfData, err := signedABAConf.Message.GetABAConfData()
@@ -42,7 +42,7 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 
 	alreadyReceived := abaState.hasConf(ABAConfData.Round, senderID)
 	if i.verbose {
-		fmt.Println("\tsenderID:", senderID, ", votes:", ABAConfData.Votes, ", round:", ABAConfData.Round, ", already received before:", alreadyReceived)
+		fmt.Println(Teal("\tsenderID:", senderID, ", votes:", ABAConfData.Votes, ", round:", ABAConfData.Round, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, update
 	if !alreadyReceived {
@@ -53,7 +53,7 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 		if isContained {
 			abaState.setConf(ABAConfData.Round, senderID)
 			if i.verbose {
-				fmt.Println("\tupdated confcounter:", abaState.countConf(ABAConfData.Round))
+				fmt.Println(Teal("\tupdated confcounter:", abaState.countConf(ABAConfData.Round)))
 			}
 		}
 	}
@@ -61,13 +61,13 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	// reached strong support -> try to decide value
 	if abaState.countConf(ABAConfData.Round) >= i.State.Share.Quorum {
 		if i.verbose {
-			fmt.Println("\treached quorum")
+			fmt.Println(Teal("\treached quorum"))
 		}
 
 		// get common coin
 		s := abaState.Coin(abaState.Round)
 		if i.verbose {
-			fmt.Println("\tcoin:", s)
+			fmt.Println(Teal("\tcoin:", s))
 		}
 
 		// if values = {0,1}, choose randomly (i.e. coin) value for next round
@@ -75,18 +75,18 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 
 			abaState.setVInput(ABAConfData.Round+1, s)
 			if i.verbose {
-				fmt.Println("\tlength of values is 2", abaState.Values[ABAConfData.Round], "-> storing coin to next Vin")
+				fmt.Println(Teal("\tlength of values is 2", abaState.Values[ABAConfData.Round], "-> storing coin to next Vin"))
 			}
 		} else {
 			if i.verbose {
-				fmt.Println("\tlength of values is 1:", abaState.Values[ABAConfData.Round])
+				fmt.Println(Teal("\tlength of values is 1:", abaState.Values[ABAConfData.Round]))
 			}
 			abaState.setVInput(ABAConfData.Round+1, abaState.GetValues(ABAConfData.Round)[0])
 
 			// if value has only one value, sends FINISH
 			if abaState.GetValues(ABAConfData.Round)[0] == s {
 				if i.verbose {
-					fmt.Println("\tvalue equal to S")
+					fmt.Println(Teal("\tvalue equal to S"))
 				}
 				// check if indeed never sent FINISH message for this vote
 				if !abaState.sentFinish(s) {
@@ -95,13 +95,13 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 						return errors.Wrap(err, "uponABAConf: failed to create ABA Finish message")
 					}
 					if i.verbose {
-						fmt.Println("\tSending ABAFinish")
+						fmt.Println(Teal("\tSending ABAFinish"))
 					}
 					i.Broadcast(finishMsg)
 					abaState.setSentFinish(s, true)
 					abaState.setFinish(i.State.Share.OperatorID, s)
 					if i.verbose {
-						fmt.Println("\tupdated SentFinish:", abaState.SentFinish)
+						fmt.Println(Teal("\tupdated SentFinish:", abaState.SentFinish))
 					}
 				}
 			}
@@ -109,11 +109,11 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 
 		// increment round
 		if i.verbose {
-			fmt.Println("\twill icrement round. Round now:", abaState.Round)
+			fmt.Println(Teal("\twill icrement round. Round now:", abaState.Round))
 		}
 		abaState.IncrementRound()
 		if i.verbose {
-			fmt.Println("\tnew round:", abaState.Round)
+			fmt.Println(Teal("\tnew round:", abaState.Round))
 		}
 
 		// start new round sending INIT message with vote
@@ -122,7 +122,7 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 			return errors.Wrap(err, "uponABAConf: failed to create ABA Init message")
 		}
 		if i.verbose {
-			fmt.Println("\tSending ABAInit with new Vin:", abaState.Vin[abaState.Round], ", for round:", abaState.Round)
+			fmt.Println(Teal("\tSending ABAInit with new Vin:", abaState.Vin[abaState.Round], ", for round:", abaState.Round))
 		}
 		i.Broadcast(initMsg)
 		abaState.setSentInit(abaState.Round, abaState.getVInput(abaState.Round), true)
