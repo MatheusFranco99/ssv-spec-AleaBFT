@@ -62,8 +62,7 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 		if i.verbose {
 			fmt.Println(White("\tBroadcasting VCBC ready"))
 		}
-		// FIX ME : send specifically to author
-		// i.Broadcast(vcbcReadyMsg)
+
 		i.SendTCP(vcbcReadyMsg, senderID)
 
 	}

@@ -2,6 +2,7 @@ package alea
 
 import (
 	"fmt"
+	"math/rand"
 	"sync"
 
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
@@ -72,8 +73,8 @@ func (s *ABAState) String() string {
 }
 
 func (s *ABAState) Coin(round Round) byte {
-	// FIX ME : implement a RANDOM coin generator given the round number
-	return byte(round % 2)
+	rand.Seed(int64(round))
+	return byte(rand.Intn(2))
 }
 
 func (s *ABAState) InitializeRound(round Round) {
@@ -187,6 +188,9 @@ func (s *ABAState) setInit(round Round, operatorID types.OperatorID, vote byte) 
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if _, exists := s.InitCounter[round]; !exists {
+		s.InitCounter[round] = make(map[byte][]types.OperatorID)
+	}
 	if _, exists := s.InitCounter[round][vote]; !exists {
 		s.InitCounter[round][vote] = make([]types.OperatorID, 0)
 	}
@@ -197,6 +201,9 @@ func (s *ABAState) setAux(round Round, operatorID types.OperatorID, vote byte) {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 
+	if _, exists := s.AuxCounter[round]; !exists {
+		s.AuxCounter[round] = make(map[byte][]types.OperatorID)
+	}
 	if _, exists := s.AuxCounter[round][vote]; !exists {
 		s.AuxCounter[round][vote] = make([]types.OperatorID, 0)
 	}
@@ -227,16 +234,29 @@ func (s *ABAState) setFinish(operatorID types.OperatorID, vote byte) {
 func (s *ABAState) sentInit(round Round, vote byte) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	if _, exists := s.SentInit[round]; !exists {
+		s.SentInit[round] = make([]bool, 2)
+		s.SentInit[round][byte(0)] = false
+		s.SentInit[round][byte(1)] = false
+	}
 	return s.SentInit[round][vote]
 }
 func (s *ABAState) sentAux(round Round, vote byte) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	if _, exists := s.SentAux[round]; !exists {
+		s.SentAux[round] = make([]bool, 2)
+		s.SentAux[round][byte(0)] = false
+		s.SentAux[round][byte(1)] = false
+	}
 	return s.SentAux[round][vote]
 }
 func (s *ABAState) sentConf(round Round) bool {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
+	if _, exists := s.SentConf[round]; !exists {
+		s.SentConf[round] = false
+	}
 	return s.SentConf[round]
 }
 func (s *ABAState) sentFinish(vote byte) bool {

@@ -152,35 +152,11 @@ func (i *Instance) StartABA(vote byte) (byte, error) {
 	i.State.ACState.GetCurrentABAState().setInit(i.State.ACState.GetCurrentABAState().Round, i.State.Share.OperatorID, vote)
 
 	// wait until channel Terminate receives a signal
-	// t1 := time.Now()
 	for {
-		// fmt.Println(Red("Line 157. i:", i))
-		// fmt.Println(Red("\ti.State:", i.State))
-		// fmt.Println(Red("\ti.State.ACState:", i.State.ACState))
-		// fmt.Println(Red("\ti.State.ACState.GetCurrentABAState():", i.State.ACState.GetCurrentABAState()))
-		// fmt.Println(Red("\ti.State.ACState.GetCurrentABAState().Terminate:", i.State.ACState.GetCurrentABAState().Terminate))
-		// fmt.Println(Red("\ti.State.StopAgreement:", i.State.StopAgreement))
 		if i.State.ACState.GetCurrentABAState().Terminate || i.State.StopAgreement {
 			break
 		}
-		// t2 := time.Since(t1)
-		// if t2 > 3*time.Second {
-
-		// 	i.State.ACState.Reset()
-
-		// 	// broadcast INIT message with input vote
-		// 	initMsg, err := CreateABAInit(i.State, i.config, vote, i.State.ACState.GetCurrentABAState().Round, i.State.ACState.ACRound)
-		// 	if err != nil {
-		// 		return byte(2), errors.Wrap(err, "StartABA: failed to create ABA Init message")
-		// 	}
-		// 	i.Broadcast(initMsg)
-		// 	i.State.ACState.GetCurrentABAState().setSentInit(i.State.ACState.GetCurrentABAState().Round, vote, true)
-		// 	i.State.ACState.GetCurrentABAState().setInit(i.State.ACState.GetCurrentABAState().Round, i.State.Share.OperatorID, vote)
-
-		// }
 	}
-
-	// i.State.ACState.GetCurrentABAState().Terminate = false
 
 	// returns the decided value
 	return i.State.ACState.GetCurrentABAState().Vdecided, nil

@@ -18,18 +18,9 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 		return errors.Wrap(err, "uponABAAux: could not get ABAAuxData from signedABAAux")
 	}
 
-	// if future round -> intialize future state
-	if ABAAuxData.ACRound > i.State.ACState.ACRound {
-		i.State.ACState.InitializeRound(ABAAuxData.ACRound)
-	}
-	if ABAAuxData.Round > i.State.ACState.GetCurrentABAState().Round {
-		i.State.ACState.GetCurrentABAState().InitializeRound(ABAAuxData.Round)
-	}
-
 	if i.verbose {
 		fmt.Println(Magenta("\tACRound:", ABAAuxData.ACRound, "Round:", ABAAuxData.Round, "Vote:", ABAAuxData.Vote))
-		fmt.Println(Magenta("\town ACState.ACRound:", i.State.ACState.ACRound))
-		fmt.Println(Magenta("\tABAState of msg ACRound:", i.State.ACState.ABAState[ABAAuxData.ACRound]))
+		fmt.Println(Magenta("\tOwn ACState.ACRound:", i.State.ACState.ACRound))
 	}
 
 	// old message -> ignore
@@ -46,6 +37,14 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 		return nil
 	}
 
+	// if future round -> intialize future state
+	if ABAAuxData.ACRound > i.State.ACState.ACRound {
+		i.State.ACState.InitializeRound(ABAAuxData.ACRound)
+	}
+	if ABAAuxData.Round > i.State.ACState.GetABAState(ABAAuxData.ACRound).Round {
+		i.State.ACState.GetABAState(ABAAuxData.ACRound).InitializeRound(ABAAuxData.Round)
+	}
+
 	abaState := i.State.ACState.GetABAState(ABAAuxData.ACRound)
 
 	// add the message to the containers
@@ -54,19 +53,11 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 	// sender
 	senderID := signedABAAux.GetSigners()[0]
 
-	// for {
-	// 	if i.State.ACState.ABAState[ABAAuxData.ACRound].hasInit(ABAAuxData.Round, senderID, byte(0)) {
-	// 		break
-	// 	}
-	// 	if i.State.ACState.ABAState[ABAAuxData.ACRound].hasInit(ABAAuxData.Round, senderID, byte(1)) {
-	// 		break
-	// 	}
-	// }
-
 	alreadyReceived := abaState.hasAux(ABAAuxData.Round, senderID, ABAAuxData.Vote)
 	if i.verbose {
-		fmt.Println(Magenta("\tsenderID:", senderID, ", already received before:", alreadyReceived))
+		fmt.Println(Magenta("\tsenderID:", senderID, ", already received msg before:", alreadyReceived))
 	}
+
 	// if never received this msg, increment counter
 	if !alreadyReceived {
 		voteInLocalValues := abaState.existsInValues(ABAAuxData.Round, ABAAuxData.Vote)

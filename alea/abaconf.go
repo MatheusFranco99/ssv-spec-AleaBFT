@@ -18,30 +18,31 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 		return errors.Wrap(err, "uponABAConf:could not get ABAConfData from signedABAConf")
 	}
 
-	// if future round -> intialize future state
-	if ABAConfData.ACRound > i.State.ACState.ACRound {
-		i.State.ACState.InitializeRound(ABAConfData.ACRound)
-	}
-	if ABAConfData.Round > i.State.ACState.GetCurrentABAState().Round {
-		i.State.ACState.GetCurrentABAState().InitializeRound(ABAConfData.Round)
-	}
-
 	if i.verbose {
 		fmt.Println(Teal("\tACRound:", ABAConfData.ACRound, "Round:", ABAConfData.Round, "Votes:", ABAConfData.Votes))
-		fmt.Println(Teal("\town ACState.ACRound:", i.State.ACState.ACRound))
-		fmt.Println(Teal("\tABAState of msg ACRound:", i.State.ACState.ABAState[ABAConfData.ACRound]))
+		fmt.Println(Teal("\tOwn ACState.ACRound:", i.State.ACState.ACRound))
 	}
 
 	// old message -> ignore
 	if ABAConfData.ACRound < i.State.ACState.ACRound {
 		if i.verbose {
-			fmt.Println(Teal("\tolg message. Returning..."))
+			fmt.Println(Teal("\told message. Returning..."))
 		}
 		return nil
 	}
 	if ABAConfData.ACRound == i.State.ACState.ACRound && ABAConfData.Round < i.State.ACState.GetCurrentABAState().Round {
-		fmt.Println(Teal("\tolg message. Returning..."))
+		if i.verbose {
+			fmt.Println(Teal("\told message. Returning..."))
+		}
 		return nil
+	}
+
+	// if future round -> intialize future state
+	if ABAConfData.ACRound > i.State.ACState.ACRound {
+		i.State.ACState.InitializeRound(ABAConfData.ACRound)
+	}
+	if ABAConfData.Round > i.State.ACState.GetABAState(ABAConfData.ACRound).Round {
+		i.State.ACState.GetABAState(ABAConfData.ACRound).InitializeRound(ABAConfData.Round)
 	}
 
 	abaState := i.State.ACState.GetABAState(ABAConfData.ACRound)
@@ -51,15 +52,6 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 
 	// sender
 	senderID := signedABAConf.GetSigners()[0]
-
-	// for {
-	// 	if i.State.ACState.ABAState[ABAConfData.ACRound].hasAux(ABAConfData.Round, senderID, byte(0)) {
-	// 		break
-	// 	}
-	// 	if i.State.ACState.ABAState[ABAConfData.ACRound].hasAux(ABAConfData.Round, senderID, byte(1)) {
-	// 		break
-	// 	}
-	// }
 
 	alreadyReceived := abaState.hasConf(ABAConfData.Round, senderID)
 	if i.verbose {

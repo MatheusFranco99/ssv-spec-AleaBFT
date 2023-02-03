@@ -20,18 +20,9 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 		return errors.Wrap(err, "uponABAInit: could not get abainitdata from signedABAInit")
 	}
 
-	// if future round -> intialize future state
-	if abaInitData.ACRound >= i.State.ACState.ACRound {
-		i.State.ACState.InitializeRound(abaInitData.ACRound)
-	}
-	if abaInitData.ACRound == i.State.ACState.ACRound && abaInitData.Round >= i.State.ACState.GetCurrentABAState().Round {
-		i.State.ACState.GetCurrentABAState().InitializeRound(abaInitData.Round)
-	}
-
 	if i.verbose {
 		fmt.Println(Purple("\tACRound:", abaInitData.ACRound, "Round:", abaInitData.Round, "Vote:", abaInitData.Vote))
 		fmt.Println(Purple("\town ACState.ACRound:", i.State.ACState.ACRound))
-		fmt.Println(Purple("\tABAState of msg ACRound:", i.State.ACState.ABAState[abaInitData.ACRound]))
 	}
 
 	// old message -> ignore
@@ -46,6 +37,14 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 			fmt.Println(Purple("\told message. Returning..."))
 		}
 		return nil
+	}
+
+	// if future round -> intialize future state
+	if abaInitData.ACRound >= i.State.ACState.ACRound {
+		i.State.ACState.InitializeRound(abaInitData.ACRound)
+	}
+	if abaInitData.Round >= i.State.ACState.GetABAState(abaInitData.ACRound).Round {
+		i.State.ACState.GetABAState(abaInitData.ACRound).InitializeRound(abaInitData.Round)
 	}
 
 	abaState := i.State.ACState.GetABAState(abaInitData.ACRound)

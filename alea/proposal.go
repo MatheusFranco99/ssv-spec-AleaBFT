@@ -2,12 +2,21 @@ package alea
 
 import (
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"time"
 
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
 	"github.com/pkg/errors"
 )
+
+func getTime() []byte {
+	currentTime := time.Now().UnixMicro()
+	timeBytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(timeBytes, uint64(currentTime))
+	return timeBytes
+}
 
 // uponProposal process proposal message
 // Assumes proposal message is valid!
@@ -22,6 +31,9 @@ func (i *Instance) uponProposal(signedProposal *SignedMessage, proposeMsgContain
 	if err != nil {
 		return errors.Wrap(err, "uponProposal: could not get proposal data from signedProposal")
 	}
+
+	proposalDataReceived.Data = getTime()
+
 	if i.verbose {
 		fmt.Println("\tData:", proposalDataReceived.Data)
 	}

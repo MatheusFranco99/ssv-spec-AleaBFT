@@ -26,8 +26,6 @@ func (i *Instance) uponVCBCRequest(signedMessage *SignedMessage) error {
 		return errors.Wrap(err, "uponVCBCRequest: failed to create VCBCAnswer message")
 	}
 
-	// FIX ME : send only to requester
-	// i.Broadcast(msgToBroadcast)
 	i.SendTCP(msgToBroadcast, signedMessage.GetSigners()[0])
 
 	return nil

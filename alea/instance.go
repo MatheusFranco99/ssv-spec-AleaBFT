@@ -4,10 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net"
 	"os"
-	"strconv"
 	"sync"
 	"time"
 
@@ -54,6 +51,8 @@ type Instance struct {
 	startOnce   sync.Once
 	StartValue  []byte
 	verbose     bool
+	peers       map[types.OperatorID]*Instance
+	msgMutex    sync.Mutex
 }
 
 func NewInstance(
@@ -70,7 +69,7 @@ func NewInstance(
 			Height:            height,
 			LastPreparedRound: NoRound,
 			ProposeContainer:  NewMsgContainer(),
-			BatchSize:         2,
+			BatchSize:         1,
 			VCBCState:         NewVCBCState(),
 			FillGapContainer:  NewMsgContainer(),
 			FillerContainer:   NewMsgContainer(),
@@ -82,7 +81,9 @@ func NewInstance(
 		},
 		config:      config,
 		processMsgF: types.NewThreadSafeF(),
-		verbose:     true,
+		verbose:     false,
+		peers:       make(map[types.OperatorID]*Instance),
+		msgMutex:    sync.Mutex{},
 	}
 }
 
@@ -93,146 +94,63 @@ func (i *Instance) Start(value []byte, height Height) {
 		i.State.Round = FirstRound
 		i.State.Height = height
 
-		go i.Listen()
-		time.Sleep(2 * time.Second)
-		// go i.StartAgreementComponent()
+		go i.StartAgreementComponent()
 
-		// fmt.Println("Starting instance")
-
-		// -> Init
-		// state variables are initiated on constructor NewInstance (namely, queues and S)
-
-		// -> Broadcast
-		// The broadcast part runs as an instance receives proposal or vcbc messages
-		// 		proposal message: is the message that a client sends to the node
-		// 		vcbc message: is the broadcast a node does after receiving a batch size number of proposals
-
-		// The agreement component consists of an infinite loop and we shall call it with another Thread
+		go i.ProposeCycle()
 	})
+}
+
+func (i *Instance) ProposeCycle() {
+
+	signedMessage, _ := CreateProposal(i.State, i.config, []byte{1, 2, 3, 4})
+
+	time.Sleep(2 * time.Second)
+	for {
+		time.Sleep(time.Duration(uint64(i.State.Share.OperatorID)) * 3 * time.Second)
+		i.ProcessMsg(signedMessage)
+	}
+
+}
+
+func (i *Instance) RegisterPeer(inst *Instance, opID types.OperatorID) {
+	i.peers[opID] = inst
 }
 
 func (i *Instance) Deliver(proposals []*ProposalData) int {
 
 	for _, proposal := range proposals {
 		unixTime := int64(binary.BigEndian.Uint64(proposal.Data))
-		t := time.Unix(unixTime, 0)
-		elapsed := time.Since(t)
-		fmt.Println("$$$$$$$$$$$$$$$$$$GOT NEW LATENCY:", elapsed)
+		elapsed := (time.Now().UnixMicro() - unixTime)
+		fmt.Println("VALUE:", unixTime, "; LATENCY in micro:", elapsed)
 	}
 
-	// FIX ME : to be implemented
+	if len(i.State.Delivered.data) >= 20 {
+		os.Exit(1)
+	}
+
 	return 1
 }
 
-func (i *Instance) Listen() error {
-	port := strconv.Itoa(8000 + int(i.State.Share.OperatorID))
-	l, err := net.Listen("tcp", "localhost:"+port)
-	if err != nil {
-		fmt.Println("Error listening:", err.Error())
-		os.Exit(1)
-	}
-	defer l.Close()
-	fmt.Println("Listening on localhost:" + port)
-	for {
-		conn, err := l.Accept()
-		if err != nil {
-			fmt.Println("Error accepting: ", err.Error())
-			return err
-		}
-		go i.handleRequest(conn)
-	}
-}
-
-func (i *Instance) handleRequest(conn net.Conn) {
-	buf, read_err := ioutil.ReadAll(conn)
-	if read_err != nil {
-		fmt.Println("failed:", read_err)
-		return
-	}
-	signedMessage := &SignedMessage{}
-	signedMessage.Decode(buf)
-	_, _, _, err := i.ProcessMsg(signedMessage)
-	if err != nil {
-		fmt.Println("Error processing msg:", err)
-	}
-}
-
 func (i *Instance) Broadcast(msg *SignedMessage) error {
-	byts, err := msg.Encode()
-	if err != nil {
-		return errors.Wrap(err, "could not encode message")
-	}
-
-	// msgID := types.MessageID{}
-	// copy(msgID[:], msg.Message.Identifier)
-
-	// msgToBroadcast := &types.SSVMessage{
-	// 	MsgType: types.SSVConsensusMsgType,
-	// 	MsgID:   msgID,
-	// 	Data:    byts,
-	// }
-
-	// if i.verbose {
-	// 	fmt.Println("\tBroadcasting:", msg.Message.MsgType, msg.Message.Data)
-	// }
-
-	// return i.config.GetNetwork().Broadcast(msgToBroadcast)
-	for _, operator := range i.State.Share.Committee {
-		operatorID := operator.OperatorID
-		if operatorID != i.State.Share.OperatorID {
-			port := strconv.Itoa(8000 + int(operatorID))
-			conn, err := net.Dial("tcp", "localhost:"+port)
-			if err != nil {
-				fmt.Println(err)
-			} else {
-				time.Sleep(1 / 20 * time.Second)
-				_, write_err := conn.Write(byts)
-				if write_err != nil {
-					fmt.Println("failed:", write_err)
-				}
-				conn.(*net.TCPConn).CloseWrite()
-			}
-		}
+	for _, inst := range i.peers {
+		go inst.ProcessMsg(msg)
 	}
 	return nil
 }
 
 func (i *Instance) SendTCP(msg *SignedMessage, operatorID types.OperatorID) error {
-	byts, err := msg.Encode()
-	if err != nil {
-		return errors.Wrap(err, "could not encode message")
-	}
-
-	// msgID := types.MessageID{}
-	// copy(msgID[:], msg.Message.Identifier)
-
-	// msgToBroadcast := &types.SSVMessage{
-	// 	MsgType: types.SSVConsensusMsgType,
-	// 	MsgID:   msgID,
-	// 	Data:    byts,
-	// }
-
-	// if i.verbose {
-	// 	fmt.Println("\tBroadcasting:", msg.Message.MsgType, msg.Message.Data)
-	// }
-
-	// return i.config.GetNetwork().Broadcast(msgToBroadcast)
-	port := strconv.Itoa(8000 + int(operatorID))
-	conn, err := net.Dial("tcp", "localhost:"+port)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		_, write_err := conn.Write(byts)
-		if write_err != nil {
-			fmt.Println("failed:", write_err)
-		}
-		conn.(*net.TCPConn).CloseWrite()
+	if inst, exists := i.peers[operatorID]; exists {
+		go inst.ProcessMsg(msg)
 	}
 	return nil
 }
 
 // ProcessMsg processes a new QBFT msg, returns non nil error on msg processing error
 func (i *Instance) ProcessMsg(msg *SignedMessage) (decided bool, decidedValue []byte, aggregatedCommit *SignedMessage, err error) {
+
+	i.msgMutex.Lock()
+	defer i.msgMutex.Unlock()
+
 	if err := i.BaseMsgValidation(msg); err != nil {
 		return false, nil, nil, errors.Wrap(err, "invalid signed message")
 	}

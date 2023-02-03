@@ -18,22 +18,21 @@ func (i *Instance) uponABAFinish(signedABAFinish *SignedMessage) error {
 		return errors.Wrap(err, "uponABAFinish: could not get ABAFinishData from signedABAConf")
 	}
 
-	// if future round -> intialize future state
-	if ABAFinishData.ACRound > i.State.ACState.ACRound {
-		i.State.ACState.InitializeRound(ABAFinishData.ACRound)
-	}
-
 	if i.verbose {
 		fmt.Println(Red("\tABAFinish Vote:", ABAFinishData.Vote, ", ACRound:", ABAFinishData.ACRound))
 	}
 
 	// old message -> ignore
 	if ABAFinishData.ACRound < i.State.ACState.ACRound {
-
 		if i.verbose {
 			fmt.Println(Red("\told message. Returning..."))
 		}
 		return nil
+	}
+
+	// if future round -> intialize future state
+	if ABAFinishData.ACRound > i.State.ACState.ACRound {
+		i.State.ACState.InitializeRound(ABAFinishData.ACRound)
 	}
 
 	abaState := i.State.ACState.GetABAState(ABAFinishData.ACRound)
