@@ -97,7 +97,24 @@ func (i *Instance) Start(value []byte, height Height) {
 		go i.Listen()
 		time.Sleep(3 * time.Second)
 		go i.StartAgreementComponent()
+		go i.ProposeCycle()
 	})
+}
+
+func (i *Instance) ProposeCycle() {
+	t1 := time.Now().UnixMilli()
+	for {
+		t2 := time.Now().UnixMilli()
+		if t2-t1 >= 3000 {
+			proposalMsg, err := CreateProposal(i.State, i.config, []byte{1, 2, 3, 4})
+			if err != nil {
+				fmt.Println("ProposeCyle error: proposal msg can't be created.", err)
+				os.Exit(1)
+			}
+			i.uponProposal(proposalMsg, i.State.ProposeContainer)
+			t1 = time.Now().UnixMilli()
+		}
+	}
 }
 
 func (i *Instance) Deliver(proposals []*ProposalData) int {
