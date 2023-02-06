@@ -7,7 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MatheusFranco99/ssv-spec-AleaBFT/main/task"
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/main/propose"
+	launch "github.com/MatheusFranco99/ssv-spec-AleaBFT/main/task"
 	// spec "github.com/attestantio/go-eth2-client/spec/phase0"
 	// "github.com/herumi/bls-eth-go-binary/bls"
 )
@@ -32,14 +33,17 @@ func main() {
 			fmt.Println("Error: argument for -n must be an integer")
 			os.Exit(1)
 		}
-		task.Launch(n)
+		launch.Launch(n)
+		for {
+
+		}
 	case "propose":
 		n, err := strconv.Atoi(os.Args[3])
 		if err != nil {
 			fmt.Println("Error: argument for -n must be an integer")
 			os.Exit(1)
 		}
-		task.Propose(n, getTime())
+		propose.Propose(n, getTime())
 	default:
 		fmt.Println("Usage: cli launch -n [INT] or propose -n [INT]")
 		os.Exit(1)

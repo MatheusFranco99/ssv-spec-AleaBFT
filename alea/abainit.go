@@ -20,32 +20,25 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 		return errors.Wrap(err, "uponABAInit: could not get abainitdata from signedABAInit")
 	}
 
+	// old message -> ignore
+	if abaInitData.ACRound < i.State.ACState.ACRound {
+		return nil
+	}
+	if abaInitData.Round < i.State.ACState.GetCurrentABAState().Round {
+		return nil
+	}
 	// if future round -> intialize future state
-	if abaInitData.ACRound >= i.State.ACState.ACRound {
+	if abaInitData.ACRound > i.State.ACState.ACRound {
 		i.State.ACState.InitializeRound(abaInitData.ACRound)
 	}
-	if abaInitData.ACRound == i.State.ACState.ACRound && abaInitData.Round >= i.State.ACState.GetCurrentABAState().Round {
-		i.State.ACState.GetCurrentABAState().InitializeRound(abaInitData.Round)
+	if abaInitData.Round > i.State.ACState.GetABAState(abaInitData.ACRound).Round {
+		i.State.ACState.GetABAState(abaInitData.ACRound).InitializeRound(abaInitData.Round)
 	}
 
 	if i.verbose {
 		fmt.Println(Purple("\tACRound:", abaInitData.ACRound, "Round:", abaInitData.Round, "Vote:", abaInitData.Vote))
 		fmt.Println(Purple("\town ACState.ACRound:", i.State.ACState.ACRound))
 		fmt.Println(Purple("\tABAState of msg ACRound:", i.State.ACState.ABAState[abaInitData.ACRound]))
-	}
-
-	// old message -> ignore
-	if abaInitData.ACRound < i.State.ACState.ACRound {
-		if i.verbose {
-			fmt.Println(Purple("\told message. Returning..."))
-		}
-		return nil
-	}
-	if abaInitData.ACRound == i.State.ACState.ACRound && abaInitData.Round < i.State.ACState.GetCurrentABAState().Round {
-		if i.verbose {
-			fmt.Println(Purple("\told message. Returning..."))
-		}
-		return nil
 	}
 
 	abaState := i.State.ACState.GetABAState(abaInitData.ACRound)
@@ -56,17 +49,13 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 	// sender
 	senderID := signedABAInit.GetSigners()[0]
 
-	alreadyReceived := abaState.hasInit(abaInitData.Round, senderID, abaInitData.Vote)
 	if i.verbose {
-		fmt.Println(Purple("\tsenderID:", senderID, ", already received before:", alreadyReceived))
+		fmt.Println(Purple("\tsenderID:", senderID, ", vote:", abaInitData.Vote, ", round:", abaInitData.Round, ", already received before:", abaState.hasInit(abaInitData.Round, senderID, abaInitData.Vote)))
 	}
-	// if never received this msg, update
-	if !alreadyReceived {
-		// Set received msg
+	if !abaState.hasInit(abaInitData.Round, senderID, abaInitData.Vote) {
 		abaState.setInit(abaInitData.Round, senderID, abaInitData.Vote)
-
 		if i.verbose {
-			fmt.Println(Purple("\tupdated counter. InitCounter:", abaState.InitCounter))
+			fmt.Println(Purple("\tupdated counter. Vote:", abaInitData.Vote, ". InitCounter:", abaState.InitCounter))
 		}
 	}
 
@@ -88,7 +77,8 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 			i.Broadcast(initMsg)
 			// update sent flag
 			abaState.setSentInit(abaInitData.Round, vote, true)
-			abaState.setInit(abaInitData.Round, i.State.Share.OperatorID, vote)
+			// process own init msg
+			i.uponABAInit(initMsg)
 		}
 	}
 
@@ -120,7 +110,8 @@ func (i *Instance) uponABAInit(signedABAInit *SignedMessage) error {
 
 			// update sent flag
 			abaState.setSentAux(abaInitData.Round, vote, true)
-			abaState.setAux(abaInitData.Round, i.State.Share.OperatorID, vote)
+			// process own aux msg
+			i.uponABAAux(auxMsg)
 		}
 	}
 

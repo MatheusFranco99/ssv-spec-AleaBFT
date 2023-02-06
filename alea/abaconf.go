@@ -18,30 +18,25 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 		return errors.Wrap(err, "uponABAConf:could not get ABAConfData from signedABAConf")
 	}
 
+	// old message -> ignore
+	if ABAConfData.ACRound < i.State.ACState.ACRound {
+		return nil
+	}
+	if ABAConfData.Round < i.State.ACState.GetCurrentABAState().Round {
+		return nil
+	}
 	// if future round -> intialize future state
 	if ABAConfData.ACRound > i.State.ACState.ACRound {
 		i.State.ACState.InitializeRound(ABAConfData.ACRound)
 	}
-	if ABAConfData.Round > i.State.ACState.GetCurrentABAState().Round {
-		i.State.ACState.GetCurrentABAState().InitializeRound(ABAConfData.Round)
+	if ABAConfData.Round > i.State.ACState.GetABAState(ABAConfData.ACRound).Round {
+		i.State.ACState.GetABAState(ABAConfData.ACRound).InitializeRound(ABAConfData.Round)
 	}
 
 	if i.verbose {
 		fmt.Println(Teal("\tACRound:", ABAConfData.ACRound, "Round:", ABAConfData.Round, "Votes:", ABAConfData.Votes))
 		fmt.Println(Teal("\town ACState.ACRound:", i.State.ACState.ACRound))
 		fmt.Println(Teal("\tABAState of msg ACRound:", i.State.ACState.ABAState[ABAConfData.ACRound]))
-	}
-
-	// old message -> ignore
-	if ABAConfData.ACRound < i.State.ACState.ACRound {
-		if i.verbose {
-			fmt.Println(Teal("\tolg message. Returning..."))
-		}
-		return nil
-	}
-	if ABAConfData.ACRound == i.State.ACState.ACRound && ABAConfData.Round < i.State.ACState.GetCurrentABAState().Round {
-		fmt.Println(Teal("\tolg message. Returning..."))
-		return nil
 	}
 
 	abaState := i.State.ACState.GetABAState(ABAConfData.ACRound)
@@ -52,35 +47,15 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 	// sender
 	senderID := signedABAConf.GetSigners()[0]
 
-	// for {
-	// 	if i.State.ACState.ABAState[ABAConfData.ACRound].hasAux(ABAConfData.Round, senderID, byte(0)) {
-	// 		break
-	// 	}
-	// 	if i.State.ACState.ABAState[ABAConfData.ACRound].hasAux(ABAConfData.Round, senderID, byte(1)) {
-	// 		break
-	// 	}
-	// }
-
 	alreadyReceived := abaState.hasConf(ABAConfData.Round, senderID)
 	if i.verbose {
 		fmt.Println(Teal("\tsenderID:", senderID, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, update
 	if !alreadyReceived {
-
-		// determine if votes list is contained in local round values list
-		isContained := abaState.isContainedInValues(ABAConfData.Round, ABAConfData.Votes)
-
+		abaState.setConf(ABAConfData.Round, senderID, ABAConfData.Votes)
 		if i.verbose {
-			fmt.Println(Teal("\tis value contained in own values? ", isContained))
-		}
-
-		// list is contained -> update CONF counter
-		if isContained {
-			abaState.setConf(ABAConfData.Round, senderID)
-			if i.verbose {
-				fmt.Println(Teal("\tupdated confcounter:", abaState.countConf(ABAConfData.Round)))
-			}
+			fmt.Println(Teal("\tupdated confcounter:", abaState.countConf(ABAConfData.Round)))
 		}
 	}
 
@@ -90,8 +65,16 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 			fmt.Println(Teal("\treached quorum of conf"))
 		}
 
+		q := abaState.CountConfContainedInValues(ABAConfData.Round)
+		if q < i.State.Share.Quorum {
+			if i.verbose {
+				fmt.Println(Teal("\tbut quorum reached doesn't have quorum of contained valued"))
+			}
+			return nil
+		}
+
 		// get common coin
-		s := abaState.Coin(abaState.Round)
+		s := i.config.GetCoinF()(abaState.Round)
 		if i.verbose {
 			fmt.Println(Teal("\tcoin:", s))
 		}
@@ -124,11 +107,10 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 						fmt.Println(Teal("\tSending ABAFinish"))
 					}
 					i.Broadcast(finishMsg)
+					// update sent finish flag
 					abaState.setSentFinish(s, true)
-					abaState.setFinish(i.State.Share.OperatorID, s)
-					if i.verbose {
-						fmt.Println(Teal("\tupdated SentFinish:", abaState.SentFinish))
-					}
+					// process own finish msg
+					i.uponABAFinish(finishMsg)
 				}
 			}
 		}
@@ -152,9 +134,10 @@ func (i *Instance) uponABAConf(signedABAConf *SignedMessage) error {
 			fmt.Println(Teal("\tSending ABAInit with new Vin:", abaState.Vin[abaState.Round], ", for round:", abaState.Round, ", for ACRound:", ABAConfData.ACRound))
 		}
 		i.Broadcast(initMsg)
-
+		// update sent init flag
 		abaState.setSentInit(abaState.Round, abaState.getVInput(abaState.Round), true)
-		abaState.setInit(abaState.Round, i.State.Share.OperatorID, abaState.getVInput(abaState.Round))
+		// process own aux msg
+		i.uponABAInit(initMsg)
 
 		if i.verbose {
 			fmt.Println(Teal("\tupdating own initCounter and setInit:", abaState.InitCounter, ", ", abaState.SentInit))

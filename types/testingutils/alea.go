@@ -30,6 +30,7 @@ var TestingConfigAlea = func(keySet *TestKeySet) *alea.Config {
 		},
 		Network: NewTestingNetworkAlea(),
 		Timer:   NewTestingTimerAlea(),
+		CoinF:   alea.SharedCoinF,
 	}
 }
 

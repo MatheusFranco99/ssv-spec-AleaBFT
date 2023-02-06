@@ -22,17 +22,6 @@ func (i *Instance) StartVCBC(priority Priority) error {
 	}
 	i.Broadcast(msgToBroadcast)
 
-	if i.verbose {
-		fmt.Println("\tadding proposals to local queue")
-	}
-	if i.verbose {
-		fmt.Println("\tOld queue:", i.State.VCBCState.queues[author])
-	}
-	i.AddVCBCOutput(proposals, priority, author)
-	if i.verbose {
-		fmt.Println("\tNew queue:", i.State.VCBCState.queues[author])
-	}
-
 	if err = i.AddOwnVCBCReady(proposals, priority); err != nil {
 		return errors.Wrap(err, "StartVCBC: could not perform own VCBCReady")
 	}
@@ -58,7 +47,7 @@ func (i *Instance) AddOwnVCBCReady(proposals []*ProposalData, priorioty Priority
 	return nil
 }
 
-func (i *Instance) AddVCBCOutput(proposals []*ProposalData, priorioty Priority, author types.OperatorID) {
+func (i *Instance) AddVCBCOutput(proposals []*ProposalData, priority Priority, author types.OperatorID) {
 
 	// initializes queue of the author if it doesn't exist
 	if _, exists := i.State.VCBCState.queues[author]; !exists {
@@ -73,6 +62,11 @@ func (i *Instance) AddVCBCOutput(proposals []*ProposalData, priorioty Priority, 
 		return
 	}
 
+	// check if queue alreasy has proposals and priority
+	if queue.hasPriority(priority) {
+		return
+	}
+
 	// store proposals and priorioty value
-	queue.Enqueue(proposals, priorioty)
+	queue.Enqueue(proposals, priority)
 }

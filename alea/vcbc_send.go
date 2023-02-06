@@ -20,10 +20,8 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 		errors.New("uponVCBCSend: could not get vcbcSendData data from signedMessage")
 	}
 
-	// check if it was already received. If yes -> return, else -> store and send READY
-	if i.State.VCBCState.hasM(vcbcSendData.Author, vcbcSendData.Priority) {
-		return nil
-	} else {
+	// check if it was already received. If not -> store
+	if !i.State.VCBCState.hasM(vcbcSendData.Author, vcbcSendData.Priority) {
 		i.State.VCBCState.setM(vcbcSendData.Author, vcbcSendData.Priority, vcbcSendData.Proposals)
 	}
 
@@ -62,10 +60,8 @@ func (i *Instance) uponVCBCSend(signedMessage *SignedMessage) error {
 		if i.verbose {
 			fmt.Println(White("\tBroadcasting VCBC ready"))
 		}
-		// FIX ME : send specifically to author
-		// i.Broadcast(vcbcReadyMsg)
+		// send specifically to author
 		i.SendTCP(vcbcReadyMsg, senderID)
-
 	}
 
 	if i.verbose {

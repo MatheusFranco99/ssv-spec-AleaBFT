@@ -83,6 +83,7 @@ func (i *Instance) uponVCBCReady(signedMessage *SignedMessage) error {
 			}
 			i.Broadcast(vcbcFinalMsg)
 
+			i.uponVCBCFinal(vcbcFinalMsg)
 		}
 	}
 

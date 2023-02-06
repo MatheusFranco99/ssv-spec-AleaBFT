@@ -18,32 +18,26 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 		return errors.Wrap(err, "uponABAAux: could not get ABAAuxData from signedABAAux")
 	}
 
+	// old message -> ignore
+	if ABAAuxData.ACRound < i.State.ACState.ACRound {
+		return nil
+	}
+	if ABAAuxData.Round < i.State.ACState.GetCurrentABAState().Round {
+		return nil
+	}
+
 	// if future round -> intialize future state
 	if ABAAuxData.ACRound > i.State.ACState.ACRound {
 		i.State.ACState.InitializeRound(ABAAuxData.ACRound)
 	}
-	if ABAAuxData.Round > i.State.ACState.GetCurrentABAState().Round {
-		i.State.ACState.GetCurrentABAState().InitializeRound(ABAAuxData.Round)
+	if ABAAuxData.Round > i.State.ACState.GetABAState(ABAAuxData.ACRound).Round {
+		i.State.ACState.GetABAState(ABAAuxData.ACRound).InitializeRound(ABAAuxData.Round)
 	}
 
 	if i.verbose {
 		fmt.Println(Magenta("\tACRound:", ABAAuxData.ACRound, "Round:", ABAAuxData.Round, "Vote:", ABAAuxData.Vote))
 		fmt.Println(Magenta("\town ACState.ACRound:", i.State.ACState.ACRound))
 		fmt.Println(Magenta("\tABAState of msg ACRound:", i.State.ACState.ABAState[ABAAuxData.ACRound]))
-	}
-
-	// old message -> ignore
-	if ABAAuxData.ACRound < i.State.ACState.ACRound {
-		if i.verbose {
-			fmt.Println(Magenta("\told message. Returning..."))
-		}
-		return nil
-	}
-	if ABAAuxData.ACRound == i.State.ACState.ACRound && ABAAuxData.Round < i.State.ACState.GetCurrentABAState().Round {
-		if i.verbose {
-			fmt.Println(Magenta("\told message. Returning..."))
-		}
-		return nil
 	}
 
 	abaState := i.State.ACState.GetABAState(ABAAuxData.ACRound)
@@ -54,33 +48,15 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 	// sender
 	senderID := signedABAAux.GetSigners()[0]
 
-	// for {
-	// 	if i.State.ACState.ABAState[ABAAuxData.ACRound].hasInit(ABAAuxData.Round, senderID, byte(0)) {
-	// 		break
-	// 	}
-	// 	if i.State.ACState.ABAState[ABAAuxData.ACRound].hasInit(ABAAuxData.Round, senderID, byte(1)) {
-	// 		break
-	// 	}
-	// }
-
 	alreadyReceived := abaState.hasAux(ABAAuxData.Round, senderID, ABAAuxData.Vote)
 	if i.verbose {
 		fmt.Println(Magenta("\tsenderID:", senderID, ", already received before:", alreadyReceived))
 	}
 	// if never received this msg, increment counter
 	if !alreadyReceived {
-		voteInLocalValues := abaState.existsInValues(ABAAuxData.Round, ABAAuxData.Vote)
+		abaState.setAux(ABAAuxData.Round, senderID, ABAAuxData.Vote)
 		if i.verbose {
-			fmt.Println(Magenta("\tvote received is in local values? ", voteInLocalValues, ". Local values (of round", ABAAuxData.Round, "):", abaState.Values[ABAAuxData.Round], ". Vote:", ABAAuxData.Vote))
-		}
-
-		if voteInLocalValues {
-			// increment counter
-
-			abaState.setAux(ABAAuxData.Round, senderID, ABAAuxData.Vote)
-			if i.verbose {
-				fmt.Println(Magenta("\tincremented aux counter:", abaState.AuxCounter))
-			}
+			fmt.Println(Magenta("\tincremented aux counter:", abaState.AuxCounter))
 		}
 	}
 
@@ -89,6 +65,22 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 		if i.verbose {
 			fmt.Println(Magenta("\tgot quorum of AUX and never sent conf"))
 		}
+
+		if i.verbose {
+			fmt.Println(Magenta("\tcalculating q"))
+		}
+		q := abaState.CountAuxInValues(ABAAuxData.Round)
+		if i.verbose {
+			fmt.Println(Magenta("\tq:", q, ", quorum:", i.State.Share.Quorum))
+		}
+
+		if q < i.State.Share.Quorum {
+			if i.verbose {
+				fmt.Println(Magenta("\tcurrent quorum of msgs doesn't reach quorum of msgs with votes in local values. q (votes in local values):", q))
+			}
+			return nil
+		}
+
 		if i.verbose {
 			fmt.Println(Magenta("\tsending Conf:", abaState.Values[ABAAuxData.Round], ", round:", ABAAuxData.Round, "ACRound:", ABAAuxData.ACRound))
 		}
@@ -104,7 +96,8 @@ func (i *Instance) uponABAAux(signedABAAux *SignedMessage) error {
 
 		// update sent flag
 		abaState.setSentConf(ABAAuxData.Round, true)
-		abaState.setConf(ABAAuxData.Round, i.State.Share.OperatorID)
+		// process own conf msg
+		i.uponABAConf(confMsg)
 	}
 
 	if i.verbose {

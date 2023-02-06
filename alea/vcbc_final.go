@@ -46,19 +46,8 @@ func (i *Instance) uponVCBCFinal(signedMessage *SignedMessage) error {
 		return nil
 	}
 
-	// check if already has local aggregated signature. If so, returns (since it alreasy has and delivered the proposals).
-	if i.State.VCBCState.hasU(vcbcFinalData.Author, vcbcFinalData.Priority) {
-		if i.verbose {
-			fmt.Println(Teal("\talready has proof, quiting."))
-		}
-		return nil
-	}
-
 	// store proof
 	i.State.VCBCState.setU(vcbcFinalData.Author, vcbcFinalData.Priority, vcbcFinalData.AggregatedMsg)
-
-	// create VCBCDeliver message and broadcasts
-	proposals = i.State.VCBCState.getM(vcbcFinalData.Author, vcbcFinalData.Priority)
 
 	if i.verbose {
 		fmt.Println(Teal("\tAdding to VCBC output."))
