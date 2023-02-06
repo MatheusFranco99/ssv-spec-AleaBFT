@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/MatheusFranco99/ssv-spec-AleaBFT/main/propose"
-	launch "github.com/MatheusFranco99/ssv-spec-AleaBFT/main/task"
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/localSimulation/propose"
+	launch "github.com/MatheusFranco99/ssv-spec-AleaBFT/localSimulation/task"
 	// spec "github.com/attestantio/go-eth2-client/spec/phase0"
 	// "github.com/herumi/bls-eth-go-binary/bls"
 )
