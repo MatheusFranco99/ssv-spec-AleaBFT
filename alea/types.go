@@ -14,7 +14,7 @@ const (
 	NoRound      Round   = 0 // NoRound represents a nil/ zero round
 	FirstRound   Round   = 1 // FirstRound value is the first round in any QBFT instance start
 	FirstHeight  Height  = 0
-	FirstACRound ACRound = 0
+	FirstACRound ACRound = 1
 )
 
 const (
