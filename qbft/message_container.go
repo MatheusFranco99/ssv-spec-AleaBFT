@@ -3,6 +3,7 @@ package qbft
 import (
 	"bytes"
 	"encoding/json"
+
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
 )
 
@@ -19,6 +20,9 @@ func NewMsgContainer() *MsgContainer {
 // AllMessaged returns all messages
 func (c *MsgContainer) AllMessaged() []*SignedMessage {
 	ret := make([]*SignedMessage, 0)
+	if c.Msgs == nil {
+		c.Msgs = map[Round][]*SignedMessage{}
+	}
 	for _, roundMsgs := range c.Msgs {
 		ret = append(ret, roundMsgs...)
 	}
@@ -27,6 +31,9 @@ func (c *MsgContainer) AllMessaged() []*SignedMessage {
 
 // MessagesForRound returns all msgs for Height and round, empty slice otherwise
 func (c *MsgContainer) MessagesForRound(round Round) []*SignedMessage {
+	if c.Msgs == nil {
+		c.Msgs = map[Round][]*SignedMessage{}
+	}
 	if c.Msgs[round] != nil {
 		return c.Msgs[round]
 	}
@@ -35,6 +42,9 @@ func (c *MsgContainer) MessagesForRound(round Round) []*SignedMessage {
 
 // MessagesForRoundAndValue returns all msgs for round and value, empty slice otherwise
 func (c *MsgContainer) MessagesForRoundAndValue(round Round, value []byte) []*SignedMessage {
+	if c.Msgs == nil {
+		c.Msgs = map[Round][]*SignedMessage{}
+	}
 	if c.Msgs[round] != nil {
 		ret := make([]*SignedMessage, 0)
 		for i := 0; i < len(c.Msgs[round]); i++ {
@@ -54,6 +64,9 @@ func (c *MsgContainer) MessagesForRoundAndValue(round Round, value []byte) []*Si
 func (c *MsgContainer) LongestUniqueSignersForRoundAndValue(round Round, value []byte) ([]types.OperatorID, []*SignedMessage) {
 	signersRet := make([]types.OperatorID, 0)
 	msgsRet := make([]*SignedMessage, 0)
+	if c.Msgs == nil {
+		c.Msgs = map[Round][]*SignedMessage{}
+	}
 	if c.Msgs[round] == nil {
 		return signersRet, msgsRet
 	}
@@ -93,6 +106,9 @@ func (c *MsgContainer) LongestUniqueSignersForRoundAndValue(round Round, value [
 
 // AddFirstMsgForSignerAndRound will add the first msg for each signer for a specific round, consequent msgs will not be added
 func (c *MsgContainer) AddFirstMsgForSignerAndRound(msg *SignedMessage) (bool, error) {
+	if c.Msgs == nil {
+		c.Msgs = map[Round][]*SignedMessage{}
+	}
 	if c.Msgs[msg.Message.Round] == nil {
 		c.Msgs[msg.Message.Round] = make([]*SignedMessage, 0)
 	}
@@ -110,6 +126,9 @@ func (c *MsgContainer) AddFirstMsgForSignerAndRound(msg *SignedMessage) (bool, e
 
 // AddMsg will add any message regardless of signers
 func (c *MsgContainer) AddMsg(msg *SignedMessage) {
+	if c.Msgs == nil {
+		c.Msgs = map[Round][]*SignedMessage{}
+	}
 	if c.Msgs[msg.Message.Round] == nil {
 		c.Msgs[msg.Message.Round] = make([]*SignedMessage, 0)
 	}
