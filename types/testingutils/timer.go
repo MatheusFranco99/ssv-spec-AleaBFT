@@ -1,23 +1,25 @@
 package testingutils
 
-import "github.com/MatheusFranco99/ssv-spec-AleaBFT/qbft"
+import (
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/alea"
+)
 
 type TimerState struct {
 	Timeouts int
-	Round    qbft.Round
+	Round    alea.Round
 }
 
 type TestQBFTTimer struct {
 	State TimerState
 }
 
-func NewTestingTimer() qbft.Timer {
+func NewTestingTimer() alea.Timer {
 	return &TestQBFTTimer{
 		State: TimerState{},
 	}
 }
 
-func (t *TestQBFTTimer) TimeoutForRound(round qbft.Round) {
+func (t *TestQBFTTimer) TimeoutForRound(round alea.Round) {
 	t.State.Timeouts++
 	t.State.Round = round
 }

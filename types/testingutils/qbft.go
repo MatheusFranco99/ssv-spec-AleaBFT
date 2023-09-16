@@ -2,13 +2,15 @@ package testingutils
 
 import (
 	"bytes"
+
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/alea"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/qbft"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
 	"github.com/pkg/errors"
 )
 
-var TestingConfig = func(keySet *TestKeySet) *qbft.Config {
-	return &qbft.Config{
+var TestingConfig = func(keySet *TestKeySet) *alea.Config {
+	return &alea.Config{
 		Signer:    NewTestingKeyManager(),
 		SigningPK: keySet.Shares[1].GetPublicKey().Serialize(),
 		Domain:    types.PrimusTestnet,
@@ -23,7 +25,7 @@ var TestingConfig = func(keySet *TestKeySet) *qbft.Config {
 			}
 			return nil
 		},
-		ProposerF: func(state *qbft.State, round qbft.Round) types.OperatorID {
+		ProposerF: func(state *alea.State, round alea.Round) types.OperatorID {
 			return 1
 		},
 		Network: NewTestingNetwork(),
@@ -46,24 +48,24 @@ var TestingShare = func(keysSet *TestKeySet) *types.Share {
 	}
 }
 
-var BaseInstance = func() *qbft.Instance {
+var BaseInstance = func() *alea.Instance {
 	return baseInstance(TestingShare(Testing4SharesSet()), Testing4SharesSet(), []byte{1, 2, 3, 4})
 }
 
-var SevenOperatorsInstance = func() *qbft.Instance {
+var SevenOperatorsInstance = func() *alea.Instance {
 	return baseInstance(TestingShare(Testing7SharesSet()), Testing7SharesSet(), []byte{1, 2, 3, 4})
 }
 
-var TenOperatorsInstance = func() *qbft.Instance {
+var TenOperatorsInstance = func() *alea.Instance {
 	return baseInstance(TestingShare(Testing10SharesSet()), Testing10SharesSet(), []byte{1, 2, 3, 4})
 }
 
-var ThirteenOperatorsInstance = func() *qbft.Instance {
+var ThirteenOperatorsInstance = func() *alea.Instance {
 	return baseInstance(TestingShare(Testing13SharesSet()), Testing13SharesSet(), []byte{1, 2, 3, 4})
 }
 
-var baseInstance = func(share *types.Share, keySet *TestKeySet, identifier []byte) *qbft.Instance {
-	ret := qbft.NewInstance(TestingConfig(keySet), share, identifier, qbft.FirstHeight)
+var baseInstance = func(share *types.Share, keySet *TestKeySet, identifier []byte) *alea.Instance {
+	ret := alea.NewInstance(TestingConfig(keySet), share, identifier, alea.FirstHeight)
 	ret.StartValue = []byte{1, 2, 3, 4}
 	return ret
 }

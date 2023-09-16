@@ -1,7 +1,7 @@
 package testingutils
 
 import (
-	"github.com/MatheusFranco99/ssv-spec-AleaBFT/qbft"
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/alea"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
 )
 
@@ -9,7 +9,7 @@ type TestingNetwork struct {
 	BroadcastedMsgs           []*types.SSVMessage
 	SyncHighestDecidedCnt     int
 	SyncHighestChangeRoundCnt int
-	DecidedByRange            [2]qbft.Height
+	DecidedByRange            [2]alea.Height
 }
 
 func NewTestingNetwork() *TestingNetwork {
@@ -33,6 +33,6 @@ func (net *TestingNetwork) SyncHighestDecided(identifier types.MessageID) error 
 //}
 
 // SyncDecidedByRange will sync decided messages from-to (including them)
-func (net *TestingNetwork) SyncDecidedByRange(identifier types.MessageID, from, to qbft.Height) {
-	net.DecidedByRange = [2]qbft.Height{from, to}
+func (net *TestingNetwork) SyncDecidedByRange(identifier types.MessageID, from, to alea.Height) {
+	net.DecidedByRange = [2]alea.Height{from, to}
 }

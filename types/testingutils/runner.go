@@ -1,6 +1,7 @@
 package testingutils
 
 import (
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/alea"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/qbft"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/ssv"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
@@ -48,7 +49,7 @@ var UnknownDutyTypeRunner = func(keySet *TestKeySet) ssv.Runner {
 	return baseRunner(UnknownDutyType, UnknownDutyValueCheck(), keySet)
 }
 
-var baseRunner = func(role types.BeaconRole, valCheck qbft.ProposedValueCheckF, keySet *TestKeySet) ssv.Runner {
+var baseRunner = func(role types.BeaconRole, valCheck alea.ProposedValueCheckF, keySet *TestKeySet) ssv.Runner {
 	share := TestingShare(keySet)
 	identifier := types.NewMsgID(TestingValidatorPubKey[:], role)
 	net := NewTestingNetwork()
@@ -56,13 +57,13 @@ var baseRunner = func(role types.BeaconRole, valCheck qbft.ProposedValueCheckF, 
 
 	config := TestingConfig(keySet)
 	config.ValueCheckF = valCheck
-	config.ProposerF = func(state *qbft.State, round qbft.Round) types.OperatorID {
+	config.ProposerF = func(state *alea.State, round alea.Round) types.OperatorID {
 		return 1
 	}
 	config.Network = net
 	config.Signer = km
 
-	contr := qbft.NewController(
+	contr := alea.NewController(
 		identifier[:],
 		share,
 		types.PrimusTestnet,
