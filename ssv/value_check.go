@@ -2,9 +2,10 @@ package ssv
 
 import (
 	"bytes"
-	"github.com/attestantio/go-eth2-client/spec/phase0"
-	"github.com/MatheusFranco99/ssv-spec-AleaBFT/qbft"
+
+	"github.com/MatheusFranco99/ssv-spec-AleaBFT/alea"
 	"github.com/MatheusFranco99/ssv-spec-AleaBFT/types"
+	"github.com/attestantio/go-eth2-client/spec/phase0"
 	"github.com/pkg/errors"
 )
 
@@ -40,7 +41,7 @@ func AttesterValueCheckF(
 	validatorPK types.ValidatorPK,
 	validatorIndex phase0.ValidatorIndex,
 	sharePublicKey []byte,
-) qbft.ProposedValueCheckF {
+) alea.ProposedValueCheckF {
 	return func(data []byte) error {
 		cd := &types.ConsensusData{}
 		if err := cd.Decode(data); err != nil {
@@ -84,7 +85,7 @@ func ProposerValueCheckF(
 	validatorPK types.ValidatorPK,
 	validatorIndex phase0.ValidatorIndex,
 	sharePublicKey []byte,
-) qbft.ProposedValueCheckF {
+) alea.ProposedValueCheckF {
 	return func(data []byte) error {
 		cd := &types.ConsensusData{}
 		if err := cd.Decode(data); err != nil {
@@ -107,7 +108,7 @@ func AggregatorValueCheckF(
 	network types.BeaconNetwork,
 	validatorPK types.ValidatorPK,
 	validatorIndex phase0.ValidatorIndex,
-) qbft.ProposedValueCheckF {
+) alea.ProposedValueCheckF {
 	return func(data []byte) error {
 		cd := &types.ConsensusData{}
 		if err := cd.Decode(data); err != nil {
@@ -129,7 +130,7 @@ func SyncCommitteeValueCheckF(
 	network types.BeaconNetwork,
 	validatorPK types.ValidatorPK,
 	validatorIndex phase0.ValidatorIndex,
-) qbft.ProposedValueCheckF {
+) alea.ProposedValueCheckF {
 	return func(data []byte) error {
 		cd := &types.ConsensusData{}
 		if err := cd.Decode(data); err != nil {
@@ -151,7 +152,7 @@ func SyncCommitteeContributionValueCheckF(
 	network types.BeaconNetwork,
 	validatorPK types.ValidatorPK,
 	validatorIndex phase0.ValidatorIndex,
-) qbft.ProposedValueCheckF {
+) alea.ProposedValueCheckF {
 	return func(data []byte) error {
 		cd := &types.ConsensusData{}
 		if err := cd.Decode(data); err != nil {
